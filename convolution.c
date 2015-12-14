@@ -91,14 +91,77 @@ void convolve_kernel_square_2d(const float* fin, float* fout, unsigned w1, const
   #endif
 }
 
+void convolve_kernel_square_inplace_2d(float* f, unsigned w1, float* k, unsigned w2) {
+  float ocpy[w1 * w1];
+  memcpy(ocpy, f, w1 * w1 * sizeof(float));
+  convolve_kernel_square_2d(ocpy, f, w1, k, w2);
+}
+
 void convolve_kernel_blur_33(const float* fin, float* fout, unsigned w) {
   convolve_kernel_square_2d(fin, fout, w, blur_33_kernel, 1);
 }
 
 void convolve_kernel_blur_33_inplace(float* f, unsigned w) {
-  float ocpy[w * w];
-  memcpy(ocpy, f, w * w * sizeof(float));
-  convolve_kernel_blur_33(ocpy, f, w);
+  convolve_kernel_square_inplace_2d(f, w, blur_33_kernel, 1);
+}
+
+void convolve_kernel_blur_2d(const float* fin, float* fout, unsigned w1, unsigned w2) {
+  float kernel[(w2 + 1) * (w2 + 1)];
+  round_blur_kernel_2d(kernel, w2);
+  convolve_kernel_square_2d(fin, fout, w1, kernel, w2);
+}
+
+void convolve_kernel_blur_inplace(float* f, unsigned w1, unsigned w2) {
+  float kernel[(w2 * 2 + 1) * (w2 * 2 + 1)];
+  round_blur_kernel_2d(kernel, w2);
+  convolve_kernel_square_inplace_2d(f, w1, kernel, w2);
+}
+
+//TODO could be made more efficient if quadrant repetition were reused.
+void round_blur_kernel_2d(float* out, int w) {
+  unsigned tw = w * 2 + 1;
+  //We use 1 / (1 + d^2 / w) for the unnormalized weight.
+  float weight = 0;
+  for(int y = -w; y <= w; y++) {
+    for(int x = -w; x <= w; x++) {
+      int yy = y + w;
+      int xx = x + w;
+      float dSqr = (x * x + y * y);
+      float val = 1.0 / (1 + dSqr / w);
+      out[yy * tw + xx] = val;
+      weight += val;
+    }
+  }
+  
+  float scale = 1.0 / weight;
+  for(unsigned i = 0; i < tw * tw; i++) {
+    out[i] *= scale;
+  }
+  
+  /*
+  float scale = 1.0 / (4 * w);
+  
+  //Scale and copy to other quadrants.  Skips the x and y axes.
+  for(int y = -w; y < 0; y++) {
+    for(int x = -w; x < 0; x++) {
+      int yy = y + w;
+      int xx = x + w;
+      
+      //Indices of the corresponding value in each quadrant.
+      unsigned iQ1 = yy * tw + (tw - xx - 1);
+      unsigned iQ2 = yy * tw + xx;
+      unsigned iQ3 = (tw - yy - 1) * tw + xx;
+      unsigned iQ4 = (tw - yy - 1) * tw + (tw - xx - 1);
+      out[iQ1] = out[iQ2] = out[iQ3] = out[iQ4] = out[iQ2] * scale;
+    }
+  }
+  
+  //Scale the 
+  for(int i = -w; i <= w; i++) {
+  
+  } 
+  
+  */
 }
 
 float blur_33_kernel[9] = {

@@ -8,9 +8,16 @@ float calculateMatrixDot(const float* m1, unsigned w1, unsigned x, unsigned y, c
 //Apply a convolution kernel to f1, a matrix of width w1.  Kernel, of radius w2, givn by convolution.  Result stored in fout, a matrix of width w1.
 void convolve_kernel_square_2d(const float* fin, float* fout, unsigned w1, const float* convolution, unsigned w2);
 
+void convolve_kernel_square_inplace_2d(float* f, unsigned w1, float* k, unsigned w2);
+
 void convolve_kernel_blur_33(const float* fin, float* fout, unsigned w);
 void convolve_kernel_blur_33_inplace(float* fin, unsigned w);
 extern float blur_33_kernel[9];
+
+void convolve_kernel_blur(const float* fin, float* fout, unsigned w1, unsigned w2);
+void convolve_kernel_blur_inplace(float* fin, unsigned w1, unsigned w2);
+
+void round_blur_kernel_2d(float* out, int w);
 
 #endif
 

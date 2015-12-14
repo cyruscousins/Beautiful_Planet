@@ -16,6 +16,9 @@
 unsigned imageWidth = 1000;
 char* testPrefix;
 
+unsigned nsSize = 32;
+unsigned nsDepth = 4;
+
 char fileBuffer[256];
 
 //Create a tiny test ppm
@@ -81,7 +84,7 @@ void test4() {
   noise_sum* noiseFunctions[3];
   
   for(unsigned i = 0; i < 3; i++) {
-    noiseFunctions[i] = initialize_noise_sum_2d(16, 4);
+    noiseFunctions[i] = initialize_noise_sum_2d(nsSize, nsDepth);
     noise_sum_scale_in(noiseFunctions[i], 2 * 1.0 / (imageWidth)); //Should cause 4 identical tiles.
   }
   
@@ -265,7 +268,7 @@ void test7() {
   
   
   //Potential Function:
-  noise_sum* ncl = initialize_noise_sum_2d(4, 4);
+  noise_sum* ncl = initialize_noise_sum_2d(nsSize, nsDepth);
   noise_sum_scale_in(ncl, 1.0 / imageWidth);
 
   centered_cl orbitcl = { imageWidth / 2.0, imageWidth / 2.0, 1000 * 1000, 100 };
@@ -343,6 +346,12 @@ int main(int argc, char** argsv) {
     if(sscanf(argsv[i], "w=%d", &val)) {
       imageWidth = val;
       printf("Setting width of test images to %u.\n", imageWidth);
+    } else if(sscanf(argsv[i], "s=%d", &val)) {
+      nsSize = val;
+      printf("Setting noise width to %u.\n", nsSize);
+    } else if(sscanf(argsv[i], "d=%d", &val)) {
+      nsDepth = val;
+      printf("Setting noise depth to %u.\n", nsDepth);
     } else if(sscanf(argsv[i], "%d", &val)) {
       if(val == -1) {
         for(unsigned i = 0; i < TESTCOUNT; i++) {

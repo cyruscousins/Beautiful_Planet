@@ -12,6 +12,7 @@ void convolve_kernel_square_inplace_2d(float* f, unsigned w1, float* k, unsigned
 
 void convolve_kernel_blur_33(const float* fin, float* fout, unsigned w);
 void convolve_kernel_blur_33_inplace(float* fin, unsigned w);
+
 extern float blur_33_kernel[9];
 
 void convolve_kernel_blur(const float* fin, float* fout, unsigned w1, unsigned w2);

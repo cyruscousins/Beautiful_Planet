@@ -74,6 +74,16 @@ void wind_remove(wind* w, unsigned index) {
   wind_mass(w)[index] = wind_mass(w)[w->particles];
 }
 
+//Removes particles, jumping [0, d) between removals.
+void wind_remove_rand(wind* w, unsigned d) {
+  unsigned i = 0;
+  while(1) {
+    i += uniformInt(0, d);
+    if(i >= w->particles) break;
+    wind_remove(w, i);
+  }
+}
+
 void wind_empty(wind* w) {
   w->particles = 0;
 }
@@ -121,7 +131,7 @@ void wind_draw(wind* w, image* img, float r, float g, float b, float a, float x0
   }
 }
 void wind_draw_roffset(wind* w, image* img, float r, float g, float b, float a, float x0, float y0, float scale, unsigned copies, unsigned maxOffset) {
-assert(bounded01(r) && bounded01(g) && bounded01(b) && bounded01(a));
+  //assert(bounded01(r) && bounded01(g) && bounded01(b) && bounded01(a));
   for(unsigned i = 0; i < w->particles; i++) {
     //Translate, scale, and offset to to make truncation round properly.
     float xf = (wind_x(w)[i] - x0) / scale + 0.5;

@@ -1,4 +1,6 @@
 
+#include <string.h>
+
 #include "filters.h"
 #include "convolution.h"
 
@@ -17,3 +19,67 @@ image* image_blur(image* i, unsigned br) {
   return i2;
 }
 
+void image_blur_inplace(image* i, unsigned br) {
+  assert(i->width == i->height);
+  
+  float* cpy = malloc(sizeof(float) * i->width * i->height);
+
+  unsigned bw = br * 2 + 1;
+  float kernel[bw * bw];
+  round_blur_kernel_2d(kernel, br); 
+  for(unsigned c = 0; c < C; c++) {
+    float* cChannel = image_pixel(i, 0, 0, c);
+    memcpy(cpy, cChannel, i->width * i->height * sizeof(float));
+    convolve_kernel_square_2d(cpy, cChannel, i->width, kernel, br);
+  }
+  
+  free(cpy);
+}
+
+//Fast blur technique suited to video if it is called repeatedly.  Essentially splits the work of a blur over time.
+void image_blur_fast_inplace(image* i, unsigned br) {
+  unsigned w = i->width;
+  unsigned x0, x1, y0, y1, o;
+  
+  /*
+  if(br % 2 == 0) {
+    x0 = 1;
+    x1 = w / 2;
+  } else {
+    x0 = w / 2;
+    x1 = w - 1;
+  }
+  if(br / 2 % 2 == 0) {
+    y0 = 1;
+    y1 = i->height / 2;
+  } else {
+    y0 = i->height / 2;
+    y1 = i->height - 1;
+  }
+  
+  o = br / 4 % 2;
+  */
+  
+  x0 = y0 = 1;
+  x1 = i->width - 1;
+  y1 = i->height - 1;
+  o = br % 2;
+  
+  float* ch[3] = {
+    image_pixel(i, 0, 0, R), image_pixel(i, 0, 0, G), image_pixel(i, 0, 0, B)
+  };
+  
+  for(unsigned c = 0; c < C; c++) {
+    //TODO could phase color channels.
+    for(unsigned y = y0; y < y1; y++) {
+      for(unsigned x = x0 + o; x < x1; x += 2) {
+        ch[c][y * w + x] = (
+                                 ch[c][(y - 1) * w + x] +
+          ch[c][y * w + x - 1] + ch[c][y * w + x]       + ch[c][y * w + x + 1] +
+                                 ch[c][(y + 1) * w + x]
+          ) / 5;
+      }
+      o = !o;
+    }
+  }
+}

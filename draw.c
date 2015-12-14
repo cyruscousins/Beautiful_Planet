@@ -16,10 +16,38 @@ void fill_rect(image* i, unsigned x0, unsigned y0, unsigned x1, unsigned y1, flo
 }
 
 void fill_image(image* i, float r, float g, float b) {
+  float* c;
+  c = image_pixel(i, 0, 0, R);
   for(unsigned p = 0; p < i->width * i->height; p++) {
-    i->data[p * C + R] = r;
-    i->data[p * C + G] = g;
-    i->data[p * C + B] = b;
+    c[p] = r;
+  }
+  c = image_pixel(i, 0, 0, G);
+  for(unsigned p = 0; p < i->width * i->height; p++) {
+    c[p] = g;
+  }
+  c = image_pixel(i, 0, 0, B);
+  for(unsigned p = 0; p < i->width * i->height; p++) {
+    c[p] = b;
+  }
+}
+
+void fill_image_a(image* i, float r, float g, float b, float a) {
+  float oa = 1 - a;
+  r *= a;
+  g *= a;
+  b *= a;
+  float* c;
+  c = image_pixel(i, 0, 0, R);
+  for(unsigned p = 0; p < i->width * i->height; p++) {
+    c[p] = c[p] * oa + r;
+  }
+  c = image_pixel(i, 0, 0, G);
+  for(unsigned p = 0; p < i->width * i->height; p++) {
+    c[p] = c[p] * oa + g;
+  }
+  c = image_pixel(i, 0, 0, B);
+  for(unsigned p = 0; p < i->width * i->height; p++) {
+    c[p] = c[p] * oa + b;
   }
 }
 

@@ -15,6 +15,7 @@
 //TODO
 //Some globals respected by (most of) the tests.
 int imageWidth = 1000;
+unsigned frames = 100;
 char* testPrefix;
 
 unsigned nsSize = 32;
@@ -226,7 +227,7 @@ void test7() {
   fill_image(img, 0, 0, 0);
   
   #undef WSIZE
-  #define WSIZE 4000
+  #define WSIZE 1000
   
   #define WIND_CURVES 8
   
@@ -257,7 +258,7 @@ void test7() {
   void* cl[WIND_CURVES];
   
   for(unsigned i = 0; i < WIND_CURVES / 2; i++) {
-    randomize_ccl_1(pc1_cl + i, imageWidth / 2, imageWidth / 2, imageWidth / 2);
+    randomize_ccl_1(pc1_cl + i, imageWidth / 2, imageWidth / 2, imageWidth / 4);
     randomize_ccl_2(pc2_cl + i, imageWidth / 2, imageWidth / 2, imageWidth / 2 * 8);
     
     cl[i] = pc1_cl + i;
@@ -290,7 +291,7 @@ void test7() {
   
   //Move along the curves, adding to the wind.
   
-  float aMax = 0.125;
+  float aMax = 1.0 / 32.0;
   
   float tStep = TAU / WSIZE;
   for(unsigned i = 0; i < WSIZE; i++) {
@@ -301,14 +302,12 @@ void test7() {
       
       wind_append(winds[j], v.x, v.y, uniformFloat(-0.125, 0.125), uniformFloat(-0.125, 0.125), uniformFloat(1, 2));
       
-      if(i % 4 == 0) {
-        //wind_update_bound(winds[j], 0.5, sumWeightedPotential, &pcl, -imageWidth / 2.0, -imageWidth / 2.0, 3.0 * imageWidth / 2, 3.0 * imageWidth / 2);
-        wind_update(winds[j], 0.5, sumWeightedPotential, &pcl);
+      //wind_update_bound(winds[j], 0.5, sumWeightedPotential, &pcl, -imageWidth / 2.0, -imageWidth / 2.0, 3.0 * imageWidth / 2, 3.0 * imageWidth / 2);
+      wind_update(winds[j], 0.25, sumWeightedPotential, &pcl);
 
-        //Draw the wind.
-        //wind_draw(winds[j], img, windColors[j * 3 + 0], windColors[j * 3 + 1], windColors[j * 3 + 2], a, 0, 0, 1);
-        wind_draw_roffset(winds[j], img, windColors[j * 3 + 0], windColors[j * 3 + 1], windColors[j * 3 + 2], a * 0.5, 0, 0, 1, 5, 5);
-      }
+      //Draw the wind.
+      //wind_draw(winds[j], img, windColors[j * 3 + 0], windColors[j * 3 + 1], windColors[j * 3 + 2], a, 0, 0, 1);
+      wind_draw_roffset(winds[j], img, windColors[j * 3 + 0], windColors[j * 3 + 1], windColors[j * 3 + 2], a * 0.5, 0, 0, 1, 3, 3);
     }
   }
   
@@ -341,9 +340,158 @@ void test7() {
   noise_sum_free(ncl);
 }
 
-#define TESTCOUNT 7
-void (*testFunctions[7])() = {
-  test1, test2, test3, test4, test5, test6, test7
+//Essentially an animated version of test 7.
+void test8() {
+  image* img = image_new(imageWidth, imageWidth);
+  fill_image(img, 0, 0, 0);
+  
+  #undef WSIZE
+  #define WSIZE 1000
+  
+  #define WIND_CURVES 8
+  
+  wind* winds[WIND_CURVES];
+  for(unsigned i = 0; i < WIND_CURVES; i++) {
+    winds[i] = wind_new(WSIZE);
+    //wind_randomize(winds[i], imageWidth, 0, 0, imageWidth, imageWidth, VMAX, 100);
+  }
+  
+  //TODO use superluminescent colors to allow white mixing.
+  float windColors[WIND_CURVES * 3] = {
+    0, 0, 2,
+    0, 2, 0,
+    2, 0, 0,
+    0, 2, 2,
+    2, 0, 2,
+    2, 2, 0,
+    2, 2, 2,
+    1, 1, 1,
+  };
+  
+  ccl_1 pc1_cl[WIND_CURVES / 2];
+  ccl_2 pc2_cl[WIND_CURVES / 2];
+  
+  //Parametric curve functions
+  vec2(*parametricCurves[WIND_CURVES])(float, void*);  
+  
+  //Closures for parametric curve functions
+  void* cl[WIND_CURVES];
+  
+  for(unsigned i = 0; i < WIND_CURVES / 2; i++) {
+    randomize_ccl_1(pc1_cl + i, imageWidth / 2, imageWidth / 2, imageWidth / 4);
+    randomize_ccl_2(pc2_cl + i, imageWidth / 2, imageWidth / 2, imageWidth / 2 * 8);
+    
+    cl[i] = pc1_cl + i;
+    parametricCurves[i] = parametric_curve_1;
+    
+    cl[i + WIND_CURVES / 2] = (void*) pc2_cl + i;
+    parametricCurves[i + WIND_CURVES / 2] = parametric_curve_2;
+  }
+  
+  
+  //Potential Function:
+  noise_sum* ncl = initialize_noise_sum_2d(nsSize, nsDepth);
+  noise_sum_scale_in(ncl, 1.0 / imageWidth);
+
+  centered_cl orbitcl = { imageWidth / 2.0, imageWidth / 2.0, 1000 * 1000, 100 };
+  
+  float(*potentialFunctions[POTENTIAL_COUNT])(float, float, void*) = {
+    noiseSumPotential,
+    distanceSquaredPotential
+  };
+  
+  void* pcls[POTENTIAL_COUNT] = {ncl, &orbitcl};
+  
+  float weights[POTENTIAL_COUNT] = {
+    1000, 10
+  };
+  
+  poly_weighted_cl pcl = { potentialFunctions, pcls, weights, POTENTIAL_COUNT};
+  
+  
+  //Move along the curves, adding to the wind.
+  
+  float a = 1.0 / 8.0;
+  
+  float tStep = TAU / WSIZE;
+  unsigned particleCount = 0;
+  for(unsigned i = 0; i < frames; i++) {
+    if(i % 10 == 0) {
+      printf("Frame %u / %u: Particles %u / %u\r", i, frames, particleCount, WSIZE * 3);
+      fflush(stdout);
+    }
+    particleCount = 0;
+    
+    //Blur and darken the existing image.
+    /*
+    fill_image_a(img, 0, 0, 0, 1.0 / 32);
+    image_blur_inplace(img, (i / 4) % 1);
+    */
+    
+    if(i % 2 == 0) {
+      fill_image_a(img, 0, 0, 0, 1.0 / 32);
+    } else {
+      image_blur_fast_inplace(img, i / 2);
+    }
+    
+    float t = tStep * i;
+    for(unsigned j = 0; j < 3; j++) { //Just draw 3 curves
+      vec2 v = parametricCurves[j](t, cl[j]);
+      
+      wind_remove_rand(winds[j], 64);
+      
+      wind_append(winds[j], v.x, v.y, uniformFloat(-0.125, 0.125), uniformFloat(-0.125, 0.125), uniformFloat(1, 2));
+      
+      //wind_update_bound(winds[j], 0.5, sumWeightedPotential, &pcl, -imageWidth / 2.0, -imageWidth / 2.0, 3.0 * imageWidth / 2, 3.0 * imageWidth / 2);
+      wind_update(winds[j], 1.0, sumWeightedPotential, &pcl);
+
+      //Draw the wind.
+      //wind_draw(winds[j], img, windColors[j * 3 + 0], windColors[j * 3 + 1], windColors[j * 3 + 2], a, 0, 0, 1);
+      wind_draw_roffset(winds[j], img, windColors[j * 3 + 0], windColors[j * 3 + 1], windColors[j * 3 + 2], a, 0, 0, 1, 3, 3);
+      
+      particleCount += winds[j]->particles;
+    }
+    
+    //Render
+    char path[128];
+    sprintf(path, "test_video/%04u.ppm", i);
+    FILE* f = fopen(path, "wb");
+    image_write_ppm(img, f, 255);
+    fclose(f);
+    
+  }
+  
+  
+  //Draw the wind
+  /*
+  for(unsigned j = 0; j < WIND_CURVES; j++) {
+    wind_draw(winds[j], img, windColors[j * 3 + 0], windColors[j * 3 + 1], windColors[j * 3 + 2], aMax, 0, 0, 1);
+    wind_draw_roffset(winds[j], img, windColors[j * 3 + 0], windColors[j * 3 + 1], windColors[j * 3 + 2], aMax * 0.5, 0, 0, 1, 5, 5);
+  }
+  */
+  
+  //Apply some blur.
+  image* img2 = image_blur(img, 2);
+  
+  //Render
+  FILE* f = fopen("test7.ppm", "wb");
+  image_write_ppm(img, f, 255);
+  fclose(f);
+  f = fopen("test7-blur.ppm", "wb");
+  image_write_ppm(img2, f, 255);
+  fclose(f);
+  
+  image_free(img);
+  image_free(img2);
+  for(unsigned i = 0; i < WIND_CURVES; i++) {
+    wind_free(winds[i]);
+  }
+  noise_sum_free(ncl);
+}
+
+#define TESTCOUNT 8
+void (*testFunctions[TESTCOUNT])() = {
+  test1, test2, test3, test4, test5, test6, test7, test8
 };
 
 #define bool char
@@ -368,6 +516,9 @@ int main(int argc, char** argsv) {
     } else if(sscanf(argsv[i], "d=%d", &val)) {
       nsDepth = val;
       printf("Setting noise depth to %u.\n", nsDepth);
+    } else if(sscanf(argsv[i], "f=%d", &val)) {
+      frames = val;
+      printf("Setting frames to %u.\n", frames);
     } else if(sscanf(argsv[i], "%d", &val)) {
       if(val == -1) {
         for(unsigned i = 0; i < TESTCOUNT; i++) {

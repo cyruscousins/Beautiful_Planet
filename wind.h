@@ -51,6 +51,7 @@ void wind_update(wind* w, float t, float (*pressure)(float, float, void*), void*
 void wind_update_bound(wind* w, float t, float (*pressure)(float, float, void*), void* cl, float x0, float y0, float x1, float y1);
 void wind_append(wind* w, float x, float y, float dx, float dy, float mass);
 void wind_remove(wind* w, unsigned index);
+void wind_remove_rand(wind* w, unsigned d2);
 void wind_empty(wind* w);
 void wind_randomize(wind* w, unsigned count, float x0, float y0, float x1, float y1, float vMax, float mMax);
 

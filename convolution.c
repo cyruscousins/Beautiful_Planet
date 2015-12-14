@@ -1,6 +1,7 @@
 
 #include <string.h>
 #include <math.h>
+#include <stdlib.h>
 
 
 #include "convolution.h"
@@ -83,11 +84,12 @@ void convolve_kernel_square_2d(const float* fin, float* fout, unsigned w1, const
   
   #ifdef DEBUG
   //Compare to a simpler but bitwise identical convolution algorithm.  Epsilon comparison used to guard against unpredictable floating point optimizations.
-  float test[w1 * w1];
+  float* test = malloc(sizeof(float) * w1 * w1);
   convolve_kernel_square_2d_slow(fin, test, w1, convolution, w2);
   for(unsigned i = 0; i < w1 * w1; i++) {
     assert(fabs(test[i] - fout[i]) < EPSILON);
   }
+  free(test);
   #endif
 }
 

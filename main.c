@@ -11,6 +11,13 @@
 #define PI 3.14159627
 #define TAU (2*PI)
 
+//TODO
+//Some globals respected by (most of) the tests.
+unsigned imageWidth = 1000;
+char* testPrefix;
+
+char fileBuffer[256];
+
 //Create a tiny test ppm
 void test1() {
   image* i = image_new(10, 10);
@@ -41,18 +48,16 @@ void test2() {
 
 //Test wind over time with the distance squared potential
 void test3() {
-  #define ISIZE 1000
-  
-  image* i = image_new(ISIZE, ISIZE);
+  image* i = image_new(imageWidth, imageWidth);
   image* img = i;
   fill_image(i, 1, 1, 1);
   
   #define WSIZE 1000
   #define VMAX 4
   wind* w = wind_new(WSIZE);
-  wind_randomize(w, ISIZE, 0, 0, ISIZE, ISIZE, VMAX, 100);
+  wind_randomize(w, imageWidth, 0, 0, imageWidth, imageWidth, VMAX, 100);
   
-  centered_cl orbitcl = { ISIZE / 2.0, ISIZE / 2.0, 100 * 100, 1 };
+  centered_cl orbitcl = { imageWidth / 2.0, imageWidth / 2.0, 100 * 100, 1 };
   
   wind_draw(w, i, 0, 0, 0, 1, 0, 0, 1);
   
@@ -70,22 +75,18 @@ void test3() {
 
 //Test the noise function.
 void test4() {
-
-#undef ISIZE
-#define ISIZE 256
-
-  image* img = image_new(ISIZE, ISIZE);
+  image* img = image_new(imageWidth, imageWidth);
   fill_image(img, 1, 1, 1);
 
   noise_sum* noiseFunctions[3];
   
   for(unsigned i = 0; i < 3; i++) {
     noiseFunctions[i] = initialize_noise_sum_2d(16, 4);
-    noise_sum_scale_in(noiseFunctions[i], 2 * 1.0 / (ISIZE)); //Should cause 4 identical tiles.
+    noise_sum_scale_in(noiseFunctions[i], 2 * 1.0 / (imageWidth)); //Should cause 4 identical tiles.
   }
   
-  for(unsigned y = 0; y < ISIZE; y++) {
-    for(unsigned x = 0; x < ISIZE; x++) {
+  for(unsigned y = 0; y < imageWidth; y++) {
+    for(unsigned x = 0; x < imageWidth; x++) {
       float intensity = noise_sum_2d(x, y, noiseFunctions[0]);
       
       for(unsigned c = 0; c < C; c++) {
@@ -103,17 +104,13 @@ void test4() {
 
 //Test drawing many winds
 void test5() {
-  #undef ISIZE
-  #define ISIZE 2000
-  //#define ISIZE 100
-
-  image* img = image_new(ISIZE, ISIZE);
+  image* img = image_new(imageWidth, imageWidth);
   fill_image(img, 0, 0, 0);
   
   noise_sum* ncl = initialize_noise_sum_2d(4, 6);
-  noise_sum_scale_in(ncl, 1.0 / ISIZE);
+  noise_sum_scale_in(ncl, 1.0 / imageWidth);
 
-  //fill_rect_f_bw(img, 0, 0, ISIZE, ISIZE, noisePaint, ncl);
+  //fill_rect_f_bw(img, 0, 0, imageWidth, imageWidth, noisePaint, ncl);
   
   #undef WSIZE
   #define WSIZE 50
@@ -125,7 +122,7 @@ void test5() {
   wind* winds[WIND_COLORS];
   for(unsigned i = 0; i < WIND_COLORS; i++) {
     winds[i] = wind_new(WSIZE);
-    wind_randomize(winds[i], ISIZE, 0, 0, ISIZE, ISIZE, VMAX, 100);
+    wind_randomize(winds[i], imageWidth, 0, 0, imageWidth, imageWidth, VMAX, 100);
   }
   
   float windColors[WIND_COLORS * 3] = {
@@ -138,7 +135,7 @@ void test5() {
     1, 1, 1,
   };
 
-  centered_cl orbitcl = { ISIZE / 2.0, ISIZE / 2.0, 1000 * 1000, 100 };
+  centered_cl orbitcl = { imageWidth / 2.0, imageWidth / 2.0, 1000 * 1000, 100 };
   
   #define POTENTIAL_COUNT 2
   float(*potentialFunctions[POTENTIAL_COUNT])(float, float, void*) = {
@@ -175,9 +172,7 @@ void test5() {
 
 //Test drawing parametric curves, drawing circles.
 void test6() {
-  #undef ISIZE
-  #define ISIZE 3000
-  image* img = image_new(ISIZE, ISIZE);
+  image* img = image_new(imageWidth, imageWidth);
   fill_image(img, 1, 1, 1);
   
   color drawcl = {0, 0, 0, 1};
@@ -187,9 +182,9 @@ void test6() {
   for(unsigned x = 0; x < REPLICANTS; x++) {
     //Draw the first parametric curve type here.
     
-    float x0 = (x + 0.5) * ISIZE / REPLICANTS;
-    float y0 = ISIZE / 3.0;
-    float scale = ISIZE * 0.5 / REPLICANTS;
+    float x0 = (x + 0.5) * imageWidth / REPLICANTS;
+    float y0 = imageWidth / 3.0;
+    float scale = imageWidth * 0.5 / REPLICANTS;
     
     ccl_1 cl;
     randomize_ccl_1(&cl, x0, y0, scale);
@@ -199,7 +194,7 @@ void test6() {
     
     //Draw the second parametric curve type here.
     
-    y0 = ISIZE * 2 / 3;
+    y0 = imageWidth * 2 / 3;
     
     ccl_2 cl2;
     randomize_ccl_2(&cl2, x0, y0, scale);
@@ -223,7 +218,7 @@ void test6() {
 
 //Test moving wind sources along parametric curves.
 void test7() {
-  image* img = image_new(ISIZE, ISIZE);
+  image* img = image_new(imageWidth, imageWidth);
   fill_image(img, 0, 0, 0);
   
   #undef WSIZE
@@ -234,7 +229,7 @@ void test7() {
   wind* winds[WIND_CURVES];
   for(unsigned i = 0; i < WIND_CURVES; i++) {
     winds[i] = wind_new(WSIZE);
-    //wind_randomize(winds[i], ISIZE, 0, 0, ISIZE, ISIZE, VMAX, 100);
+    //wind_randomize(winds[i], imageWidth, 0, 0, imageWidth, imageWidth, VMAX, 100);
   }
   
   float windColors[WIND_CURVES * 3] = {
@@ -258,8 +253,8 @@ void test7() {
   void* cl[WIND_CURVES];
   
   for(unsigned i = 0; i < WIND_CURVES / 2; i++) {
-    randomize_ccl_1(pc1_cl + i, ISIZE / 2, ISIZE / 2, ISIZE / 2);
-    randomize_ccl_2(pc2_cl + i, ISIZE / 2, ISIZE / 2, ISIZE / 2 * 8);
+    randomize_ccl_1(pc1_cl + i, imageWidth / 2, imageWidth / 2, imageWidth / 2);
+    randomize_ccl_2(pc2_cl + i, imageWidth / 2, imageWidth / 2, imageWidth / 2 * 8);
     
     cl[i] = pc1_cl + i;
     parametricCurves[i] = parametric_curve_1;
@@ -271,9 +266,9 @@ void test7() {
   
   //Potential Function:
   noise_sum* ncl = initialize_noise_sum_2d(4, 4);
-  noise_sum_scale_in(ncl, 1.0 / ISIZE);
+  noise_sum_scale_in(ncl, 1.0 / imageWidth);
 
-  centered_cl orbitcl = { ISIZE / 2.0, ISIZE / 2.0, 1000 * 1000, 100 };
+  centered_cl orbitcl = { imageWidth / 2.0, imageWidth / 2.0, 1000 * 1000, 100 };
   
   float(*potentialFunctions[POTENTIAL_COUNT])(float, float, void*) = {
     noiseSumPotential,
@@ -303,7 +298,7 @@ void test7() {
       wind_append(winds[j], v.x, v.y, uniformFloat(-0.125, 0.125), uniformFloat(-0.125, 0.125), uniformFloat(1, 2));
       
       if(i % 4 == 0) {
-        wind_update_bound(winds[j], 0.5, sumWeightedPotential, &pcl, -ISIZE / 2.0, -ISIZE / 2.0, 3.0 * ISIZE / 2, 3.0 * ISIZE / 2);
+        wind_update_bound(winds[j], 0.5, sumWeightedPotential, &pcl, -imageWidth / 2.0, -imageWidth / 2.0, 3.0 * imageWidth / 2, 3.0 * imageWidth / 2);
 
         //Draw the wind.
         //wind_draw(winds[j], img, windColors[j * 3 + 0], windColors[j * 3 + 1], windColors[j * 3 + 2], a, 0, 0, 1);
@@ -327,13 +322,48 @@ void test7() {
   image_write_ppm(img, f, 255);
 }
 
+#define TESTCOUNT 7
+void (*testFunctions[7])() = {
+  test1, test2, test3, test4, test5, test6, test7
+};
+
+#define bool char
+#define TRUE 1
+#define FALSE 0
+
 int main(int argc, char** argsv) {
-  test1();
-  test2();
-  test3();
-  test4();
-  test5();
-  test6();
-  test7();
+  bool runTest[TESTCOUNT];
+  
+  for(unsigned i = 0; i < TESTCOUNT; i++) {
+    runTest[i] = FALSE;
+  }
+  
+  for(unsigned i = 1; i < argc; i++) {
+    int val;
+    if(sscanf(argsv[i], "w=%d", &val)) {
+      imageWidth = val;
+      printf("Setting width of test images to %u.\n", imageWidth);
+    } else if(sscanf(argsv[i], "%d", &val)) {
+      if(val == -1) {
+        for(unsigned i = 0; i < TESTCOUNT; i++) {
+          runTest[i] = TRUE;
+        }
+      } else if(val <= 0 || val > TESTCOUNT) {
+        fprintf(stderr, "Can't run test %d: max is %d.  Terminating.\n", val, TESTCOUNT);
+        return 1;
+      } else {
+        runTest[val - 1] = TRUE;
+      }
+    } else {
+      fprintf(stderr, "Error: unrecognized option \"%s\".  Terminating.\n", argsv[i]);
+    }
+  }
+  
+  for(unsigned i = 0; i < TESTCOUNT; i++) {
+    if(runTest[i]) {
+      printf("Running test %u.\n", i + 1);
+      testFunctions[i]();
+    }
+  }
 }
 

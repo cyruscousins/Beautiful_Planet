@@ -16,6 +16,8 @@ noise* initialize_noise_1d(unsigned count);
 noise* initialize_noise_2d(unsigned count);
 noise* initialize_noise_3d(unsigned count);
 
+void noise_free(noise* n);
+
 float noise1d(float x, noise* n);
 float noise2d(float x, float y, noise* n);
 
@@ -27,6 +29,8 @@ typedef struct noise_sum {
 } noise_sum;
 
 noise_sum* initialize_noise_sum_2d(unsigned size, unsigned count);
+
+void noise_sum_free(noise_sum* ns);
 
 //Scales given the noise sum function.
 void noise_sum_scale_in(noise_sum* n, float scale);

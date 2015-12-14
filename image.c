@@ -17,10 +17,10 @@ float* image_pixel(image* i, unsigned x, unsigned y, unsigned c) {
   assert(y < i->height);
   assert(c < C);
   
-  #if PIXMODE == ADJACENT
+  #if (PIXMODE == ADJACENT)
   //Pixels stored as triplets.
   return i->data + (y * i->width + x) * C + c;
-  #elif PIXMODE == SEPARATE
+  #elif (PIXMODE == SEPARATE)
   //Pixels stored with separate RGB channels.
   return i->data + (i->width * i->width * c) + (y * i->width + x);
   #else

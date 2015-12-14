@@ -7,6 +7,7 @@
 #include "potentials.h"
 #include "noise.h"
 #include "parametric.h"
+#include "filters.h"
 
 #define PI 3.14159627
 #define TAU (2*PI)
@@ -301,7 +302,8 @@ void test7() {
       wind_append(winds[j], v.x, v.y, uniformFloat(-0.125, 0.125), uniformFloat(-0.125, 0.125), uniformFloat(1, 2));
       
       if(i % 4 == 0) {
-        wind_update_bound(winds[j], 0.5, sumWeightedPotential, &pcl, -imageWidth / 2.0, -imageWidth / 2.0, 3.0 * imageWidth / 2, 3.0 * imageWidth / 2);
+        //wind_update_bound(winds[j], 0.5, sumWeightedPotential, &pcl, -imageWidth / 2.0, -imageWidth / 2.0, 3.0 * imageWidth / 2, 3.0 * imageWidth / 2);
+        wind_update(winds[j], 0.5, sumWeightedPotential, &pcl);
 
         //Draw the wind.
         //wind_draw(winds[j], img, windColors[j * 3 + 0], windColors[j * 3 + 1], windColors[j * 3 + 2], a, 0, 0, 1);
@@ -319,10 +321,24 @@ void test7() {
   }
   */
   
+  //Apply some blur.
+  image* img2 = image_blur(img, 2);
   
   //Render
   FILE* f = fopen("test7.ppm", "wb");
   image_write_ppm(img, f, 255);
+  
+  fclose(f);
+  f = fopen("test7-blur.ppm", "wb");
+  image_write_ppm(img2, f, 255);
+  fclose(f);
+  
+  image_free(img);
+  image_free(img2);
+  for(unsigned i = 0; i < WIND_CURVES; i++) {
+    wind_free(winds[i]);
+  }
+  noise_sum_free(ncl);
 }
 
 #define TESTCOUNT 7

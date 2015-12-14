@@ -65,13 +65,13 @@ void wind_append(wind* w, float x, float y, float dx, float dy, float mass) {
 }
 
 void wind_remove(wind* w, unsigned index) {
-  assert(index < w->maxParticles);
+  assert(index < w->particles);
+  w->particles--;
   wind_x   (w)[index] = wind_x(w)[w->particles];
   wind_dx  (w)[index] = wind_dx(w)[w->particles];
   wind_y   (w)[index] = wind_y(w)[w->particles];
   wind_dy  (w)[index] = wind_dy(w)[w->particles];
   wind_mass(w)[index] = wind_mass(w)[w->particles];
-  w->particles--;
 }
 
 void wind_empty(wind* w) {
@@ -123,13 +123,12 @@ void wind_draw(wind* w, image* img, float r, float g, float b, float a, float x0
 void wind_draw_roffset(wind* w, image* img, float r, float g, float b, float a, float x0, float y0, float scale, unsigned copies, unsigned maxOffset) {
 assert(bounded01(r) && bounded01(g) && bounded01(b) && bounded01(a));
   for(unsigned i = 0; i < w->particles; i++) {
+    //Translate, scale, and offset to to make truncation round properly.
+    float xf = (wind_x(w)[i] - x0) / scale + 0.5;
+    float yf = (wind_y(w)[i] - y0) / scale + 0.5;
     for(unsigned j = 0; j < copies; j++) {
-      //Translate, scale, and offset to to make truncation round properly.
-      float x = (wind_x(w)[i] - x0) / scale + 0.5;
-      float y = (wind_y(w)[i] - y0) / scale + 0.5;
-      
-      x += uniformInt(-maxOffset, maxOffset);
-      y += uniformInt(-maxOffset, maxOffset);
+      unsigned x = (unsigned)(xf + uniformInt(-maxOffset, maxOffset));
+      unsigned y = (unsigned)(yf + uniformInt(-maxOffset, maxOffset));
       
       if(x < 0 || x >= img->width || y < 0 || y >= img->height) continue;
 

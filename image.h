@@ -13,6 +13,8 @@
 #define B 2
 #define C 3
 
+#define ADJACENT 1
+#define SEPARATE 2
 #define PIXMODE SEPARATE
 #define IMG_EPSILON 0.000001
 

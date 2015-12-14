@@ -34,8 +34,11 @@ parametric.o: parametric.c parametric.h image.h
 convolution.o: convolution.c convolution.h
 	gcc $(CFLAGS) convolution.c -c
 
-test: wind.o image.o main.o draw.o potentials.o noise.o parametric.o convolution.o
-	gcc $(LFLAGS) wind.o image.o main.o draw.o potentials.o noise.o parametric.o convolution.o $(LIB) -o test
+filters.o: filters.c filters.h image.h
+	gcc $(CFLAGS) filters.c -c
+
+test: wind.o image.o main.o draw.o potentials.o noise.o parametric.o convolution.o filters.o
+	gcc $(LFLAGS) wind.o image.o main.o draw.o potentials.o noise.o parametric.o convolution.o filters.o $(LIB) -o test
 
 clean:
 	rm *.o *.gch

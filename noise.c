@@ -114,6 +114,10 @@ noise* initialize_noise_3d(unsigned count) {
   return n;
 }
 
+void noise_free(noise* n) {
+  free(n);
+}
+
 float noise1d(float x, noise* n) {
   long lx = (long)x;
   if(x < 0) lx--;
@@ -170,6 +174,10 @@ noise_sum* initialize_noise_sum_2d(unsigned noiseSize, unsigned count) {
   
   ns->scale = noiseSize;
   return ns;
+}
+
+void noise_sum_free(noise_sum* ns) {
+  free(ns);
 }
 
 void noise_sum_scale_in(noise_sum* n, float scale) {

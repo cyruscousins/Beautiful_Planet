@@ -2,7 +2,10 @@
 #include <assert.h>
 
 #include "noise.h"
+#include "convolution.h"
 //#include <stdio.h>
+
+#define EPSILON 0.0001
 
 float rfloat() {
   return rand() / (float)RAND_MAX;
@@ -26,8 +29,8 @@ float* noise_2d_value(noise* n, unsigned x, unsigned y) {
   return &n->values[x + y * n->count];
 }
 
-//TODO replace with fast in place convolution.
-void blur_noise_2d(noise* n){
+//Randomly selects half the pixels (with replacement) and blurs them evenly with their neighbors.  Note: this function is lagely subsumed by convolution.
+void blur_noise_2d(noise* n) {
   for(unsigned i = 0; i < n->count * n->count / 2; i++) {
     unsigned x = rand() % n->count;
     unsigned y = rand() % n->count;
@@ -41,18 +44,60 @@ void blur_noise_2d(noise* n){
   }
 }
 
+void noise_rescale_out(noise* n, float nmin, float nmax) {
+  assert(nmin <= nmax);
+  unsigned count = n->count;
+  float tmin = n->values[0];
+  float tmax = n->values[0];
+  for(unsigned i = 1; i < count; i++) {
+    if(n->values[i] > tmax) {
+      tmax = n->values[i];
+    } else if(n->values[i] < tmin) {
+      tmin = n->values[i];
+    }
+  }
+  float scale;
+  if(tmax == tmin) {
+    scale = 0;
+  } else {
+    scale = (nmax - nmin) / (tmax - tmin);
+  }
+  for(unsigned i = 0; i < count; i++) {
+    n->values[i] = (n->values[i] - tmin) * scale + nmin;
+    assert(n->values[i] <= nmax + EPSILON);
+    assert(n->values[i] >= nmin - EPSILON);
+  }
+}
 
+//Saturate the noise toward the extremes.  Applies the following sigmoid curve:
+/*
+f(x) = { x < 0.5 : 2 * x * x | x > 0.5 : 1 - (2 * (1 - x) * (1 - x))
+*/
+float saturate(float f) {
+  assert(f >= 0 - EPSILON && f <= 1 + EPSILON);
+  
+  if(f <= 0.5) {
+    return 2 * f * f;
+  }
+  return 1 - 2 * (1 - f) * (1 - f);
+}
+void noise_saturate(noise* n, float saturation) {
+  for(unsigned i = 0; i < n->count; i++) {
+    n->values[i] = n->values[i] * (1 - saturation) + saturate(n->values[i]) * saturation;
+  }
+}
 
-
-
-noise* initialize_noise_1d(unsigned count) {
-  noise* n = malloc(sizeof(noise) + count * sizeof(float));
-  n->values = (float*) (n + 1);
+void initialize_noise_1d_inplace(noise* n, unsigned count) {
   n->count = count;
   for(unsigned i = 0; i < count; i++) {
     n->values[i] = rfloat();
     //printf("%f %d %d %f\n", n->values[i], rand(), RAND_MAX, rand() / (float)RAND_MAX);
   }
+}
+
+noise* initialize_noise_1d(unsigned count) {
+  noise* n = malloc(sizeof(noise) + count * sizeof(float));
+  initialize_noise_1d_inplace(n, count);
   return n;
 }
 
@@ -80,7 +125,8 @@ float noise1d(float x, noise* n) {
   return f0 * (1 - fx) + f1 * fx;
 }
 
-#include <stdio.h>
+//#include <stdio.h>
+//TODO more efficient version could duplicate borders, elimiating the need for %.
 float noise2d(float x, float y, noise* n) {
   //TODO long can overflow here.
   if(x < 0) {
@@ -106,53 +152,38 @@ float noise2d(float x, float y, noise* n) {
 }
 
 
-noise_sum* initialize_noise_sum_2d(unsigned size, unsigned count) {
-  noise** noises = malloc(sizeof(noise) * count);
-  float* scales = malloc(sizeof(float) * count);
-
-  noises[0] = initialize_noise_2d(size);
-  scales[0] = size;
-
-  for(unsigned i = 1; i < count; i++) {
-    noises[i] = noises[i - 1];
-    scales[i] = scales[i - 1] * (1 + rfloat());
-  }
-
-  /*
-  for(unsigned i = 0; i < count; i++) {
-    noises[i] = initialize_noise_2d(size);
-    scales[i] = 1.0 / (1 << i);
-  }
-  */
-
-  noise_sum* n = malloc(sizeof(noise_sum));
-  n->noises = noises;
-  n->scales = scales;
-  n->count = count;
-  return n;
+noise_sum* initialize_noise_sum_2d(unsigned noiseSize, unsigned count) {
+  noise_sum* ns = malloc(sizeof(noise_sum) + noiseSize * noiseSize * sizeof(float));
+  
+  initialize_noise_1d_inplace(&(ns->n), noiseSize * noiseSize);
+  //Blur with a convolution kernel.
+  convolve_kernel_blur_33_inplace(ns->n.values, noiseSize);
+  //Rescale to maximal range
+  noise_rescale_out(&ns->n, 0, 1);
+  //Saturate within the [0, 1] range (to favor extrema).
+  noise_saturate(&ns->n, 0.5);
+  
+  ns->n.count = noiseSize;
+  //blur_noise_2d(&(ns->n));
+  ns->count = count;
+  
+  ns->scale = noiseSize;
+  return ns;
 }
 
 void noise_sum_scale_in(noise_sum* n, float scale) {
-  for(unsigned i = 0; i < n->count; i++) {
-    n->scales[i] *= scale;
-  }
+  n->scale *= scale;
 }
 
 float noise_sum_2d(float x, float y, noise_sum* n) {
+  float scale = n->scale;
   float v = 0;
-  for(unsigned i = 0; i < n->count; i++) {
-    v += noise2d(n->scales[i] * x, n->scales[i] * y, n->noises[i]);
+  unsigned count = n->count;
+  noise* noise = &n->n;
+  for(unsigned i = 0; i < count; i++) {
+    v += noise2d(scale * x, scale * y, noise);
+    scale *= -2;
   }
-  return v / n->count;
+  return v / count;
 }
 
-float noise_weighted_sum_2d(float x, float y, noise_sum* n) {
-  float v = 0;
-  float w = 0;
-  unsigned count = n->count;
-  for(unsigned i = 0; i < count; i++) {
-    v += (1 / n->scales[i]) * noise2d(n->scales[i] * x, n->scales[i] * y, n->noises[i]);
-    w += 1 / n->scales[i];
-  }
-  return v / w;
-}

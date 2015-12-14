@@ -11,6 +11,7 @@
 #define PI 3.14159627
 #define TAU (2*PI)
 
+//Create a tiny test ppm
 void test1() {
   image* i = image_new(10, 10);
   fill_image(i, 0, 1, 0);
@@ -22,6 +23,7 @@ void test1() {
   //image_print(i, stdout);
 }
 
+//Create a large colored ppm
 void test2() {
   image* i = image_new(1000, 1000);
   fill_image(i, 1, 1, 1);
@@ -37,6 +39,7 @@ void test2() {
   //image_print(i, stdout);
 }
 
+//Test wind over time with the distance squared potential
 void test3() {
   #define ISIZE 1000
   
@@ -65,22 +68,26 @@ void test3() {
   //wind_print(w, stdout);
 }
 
+//Test the noise function.
 void test4() {
+
+#undef ISIZE
+#define ISIZE 256
+
   image* img = image_new(ISIZE, ISIZE);
   fill_image(img, 1, 1, 1);
 
   noise_sum* noiseFunctions[3];
   
   for(unsigned i = 0; i < 3; i++) {
-    noiseFunctions[i] = initialize_noise_sum_2d(32, 4);
+    noiseFunctions[i] = initialize_noise_sum_2d(16, 4);
+    noise_sum_scale_in(noiseFunctions[i], 2 * 1.0 / (ISIZE)); //Should cause 4 identical tiles.
   }
   
   for(unsigned y = 0; y < ISIZE; y++) {
     for(unsigned x = 0; x < ISIZE; x++) {
-      float xp = x / (float)ISIZE;
-      float yp = y / (float)ISIZE;
+      float intensity = noise_sum_2d(x, y, noiseFunctions[0]);
       
-      float intensity = noise_weighted_sum_2d(xp, yp, noiseFunctions[0]);
       for(unsigned c = 0; c < C; c++) {
         *image_pixel(img, x, y, c) = intensity;
         //*image_pixel(img, x, y, c) = noise_sum_2d(xp, yp, noiseFunctions[c]) * 2;
@@ -94,6 +101,7 @@ void test4() {
   //image_print(img, stdout);
 }
 
+//Test drawing many winds
 void test5() {
   #undef ISIZE
   #define ISIZE 2000
@@ -133,7 +141,7 @@ void test5() {
   centered_cl orbitcl = { ISIZE / 2.0, ISIZE / 2.0, 1000 * 1000, 100 };
   
   #define POTENTIAL_COUNT 2
-  float(*potentialFunctions[POTENTIAL_COUNT])(float, float, void*) = {    
+  float(*potentialFunctions[POTENTIAL_COUNT])(float, float, void*) = {
     noiseSumPotential,
     distanceSquaredPotential
   };
@@ -165,6 +173,7 @@ void test5() {
   image_write_ppm(img, f, 255);
 }
 
+//Test drawing parametric curves, drawing circles.
 void test6() {
   #undef ISIZE
   #define ISIZE 3000
@@ -212,6 +221,7 @@ void test6() {
   image_write_ppm(img, f, 255);
 }
 
+//Test moving wind sources along parametric curves.
 void test7() {
   image* img = image_new(ISIZE, ISIZE);
   fill_image(img, 0, 0, 0);
@@ -260,7 +270,7 @@ void test7() {
   
   
   //Potential Function:
-  noise_sum* ncl = initialize_noise_sum_2d(4, 6);
+  noise_sum* ncl = initialize_noise_sum_2d(4, 4);
   noise_sum_scale_in(ncl, 1.0 / ISIZE);
 
   centered_cl orbitcl = { ISIZE / 2.0, ISIZE / 2.0, 1000 * 1000, 100 };
@@ -318,12 +328,12 @@ void test7() {
 }
 
 int main(int argc, char** argsv) {
-  //test1();
-  //test2();
-  //test3();
-  //test4();
-  //test5();
-  //test6();
+  test1();
+  test2();
+  test3();
+  test4();
+  test5();
+  test6();
   test7();
 }
 

@@ -17,7 +17,7 @@ float distanceSquaredPotential(float x, float y, void* cl) {
 }
 
 float noiseSumPotential(float x, float y, void* cl) {
-  return noise_weighted_sum_2d(x, y, cl);
+  return noise_sum_2d(x, y, cl);
 }
 
 float sumPotential(float x, float y, void* cl) {

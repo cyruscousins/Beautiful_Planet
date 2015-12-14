@@ -35,7 +35,7 @@ void fill_rect_f_bw(image* i, unsigned x0, unsigned y0, unsigned x1, unsigned y1
 }
 
 float noisePaint(unsigned x, unsigned y, void* cl) {
-  return noise_weighted_sum_2d(x, y, cl);
+  return noise_sum_2d(x, y, cl);
 }
 #include <stdio.h>
 void draw_point(image* img, unsigned x, unsigned y, void* cl) {

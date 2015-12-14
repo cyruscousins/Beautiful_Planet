@@ -13,7 +13,7 @@
 
 //TODO
 //Some globals respected by (most of) the tests.
-unsigned imageWidth = 1000;
+int imageWidth = 1000;
 char* testPrefix;
 
 unsigned nsSize = 32;

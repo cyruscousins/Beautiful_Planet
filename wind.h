@@ -7,11 +7,10 @@
 
 #include "image.h"
 
-//TODO no need for data pointer.
 typedef struct wind {
-  float* data;
   unsigned particles;
   unsigned maxParticles;
+  float data[];
 } wind;
 
 #define X_IDX 0
@@ -23,36 +22,27 @@ typedef struct wind {
 
 #define EPSILON 0.001
 
-static wind* wind_new(unsigned particleCount) {
-  wind* w = malloc(sizeof(wind) + particleCount * DATA_SIZE * sizeof(float));
-  w->data = (float*) (w + 1);
-  w->particles = 0;
-  w->maxParticles = particleCount;
-  return w;
+wind* wind_new(unsigned particleCount);
+void wind_free(wind* w);
+
+static float* wind_x(wind* w) {
+  return w->data + (w->maxParticles * X_IDX);
 }
 
-static void wind_free(wind* w) {
-  free(w);
+static float* wind_y(wind* w) {
+  return w->data + (w->maxParticles * Y_IDX);
 }
 
-static float* wind_x(wind w) {
-  return w.data + (w.maxParticles * X_IDX);
+static float* wind_dx(wind* w) {
+  return w->data + (w->maxParticles * DX_IDX);
 }
 
-static float* wind_y(wind w) {
-  return w.data + (w.maxParticles * Y_IDX);
+static float* wind_dy(wind* w) {
+  return w->data + (w->maxParticles * DY_IDX);
 }
 
-static float* wind_dx(wind w) {
-  return w.data + (w.maxParticles * DX_IDX);
-}
-
-static float* wind_dy(wind w) {
-  return w.data + (w.maxParticles * DY_IDX);
-}
-
-static float* wind_mass(wind w) {
-  return w.data + (w.maxParticles * MASS_IDX);
+static float* wind_mass(wind* w) {
+  return w->data + (w->maxParticles * MASS_IDX);
 }
 
 

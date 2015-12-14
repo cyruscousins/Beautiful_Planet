@@ -52,6 +52,13 @@ void wind_update_bound(wind* w, float t, float (*pressure)(float, float, void*),
   }
 }
 
+void wind_scale_velocity(wind* w, float s) {
+  for(unsigned i = 0; i < w->particles; i++) {
+    wind_dx(w)[i] *= s;
+    wind_dy(w)[i] *= s;
+  }
+}
+
 //TODO may be good to replace a value if append fails.
 void wind_append(wind* w, float x, float y, float dx, float dy, float mass) {
   if(w->particles < w->maxParticles) {

@@ -49,6 +49,7 @@ static float* wind_mass(wind* w) {
 //Modifiers
 void wind_update(wind* w, float t, float (*pressure)(float, float, void*), void* cl);
 void wind_update_bound(wind* w, float t, float (*pressure)(float, float, void*), void* cl, float x0, float y0, float x1, float y1);
+void wind_scale_velocity(wind* w, float s);
 void wind_append(wind* w, float x, float y, float dx, float dy, float mass);
 void wind_remove(wind* w, unsigned index);
 void wind_remove_rand(wind* w, unsigned d2);

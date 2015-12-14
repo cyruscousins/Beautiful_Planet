@@ -162,7 +162,7 @@ noise_sum* initialize_noise_sum_2d(unsigned noiseSize, unsigned count) {
   initialize_noise_1d_inplace(&(ns->n), noiseSize * noiseSize);
   //Blur with a convolution kernel.
   //convolve_kernel_blur_33_inplace(ns->n.values, noiseSize);
-  convolve_kernel_blur_inplace(ns->n.values, noiseSize, noiseSize / 2); //Blur quite heavily.
+  convolve_kernel_blur_inplace(ns->n.values, noiseSize, 1 + noiseSize / 4); //Blur quite heavily.
   //Rescale to maximal range
   noise_rescale_out(&ns->n, 0, 1);
   //Saturate within the [0, 1] range (to favor extrema).

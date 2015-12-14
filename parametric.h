@@ -7,6 +7,17 @@ typedef struct vec2 {
   float x, y;
 } vec2;
 
+vec2 vPlus(vec2 a, vec2 b);
+vec2 vMinus(vec2 a, vec2 b);
+vec2 vScale(float s, vec2 a);
+float vDot(vec2 a, vec2 b);
+
+float vDSqr(vec2 a, vec2 b);
+float vDistance(vec2 a, vec2 b);
+
+vec2 uniformUnitCirc();
+vec2 symmetricUnitBall();
+
 //Generic functions for working with parametric curves.
 
 //TODO generic function to advance along a parametric curve.
@@ -23,7 +34,8 @@ void draw_parametric_curve_uniform_space(image* img, void (*draw)(image*, unsign
 
 typedef struct ccl_1 {
   float x0, y0, theta0;
-  float base, amplitude, frequency;
+  float base, amplitude;
+  unsigned frequency;
 } ccl_1;
 
 void randomize_ccl_1(ccl_1* ccl, float x0, float x1, float scale);

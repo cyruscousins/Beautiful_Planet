@@ -42,15 +42,27 @@ uint16_t image_pixel_16bit(image* i, unsigned x, unsigned y, unsigned c, uint16_
 
 //TODO nonlinear gamma correction.
 void image_write_ppm(image* i, FILE* f, uint16_t depth) {
+  //setbuf(f, NULL); //No buffered IO, we do enough buffering on our own.
   fprintf(f, "P6\n%u %u %u\n", i->width, i->height, depth);
-  for(unsigned y = 0; y < i->height; y++) {
-    for(unsigned x = 0; x < i->width; x++) {
-      if(depth < 256) {
-        uint8_t r = image_pixel_8bit(i, x, y, R, (uint8_t)depth);
-        uint8_t g = image_pixel_8bit(i, x, y, G, (uint8_t)depth);
-        uint8_t b = image_pixel_8bit(i, x, y, B, (uint8_t)depth);
-        fprintf(f, "%c%c%c", r, g, b);
-      } else {
+  if(depth < 256) {
+    //Fast path for low bitrate images.
+    char data[3 * i->height * i->width];
+    for(unsigned y = 0; y < i->height; y++) {
+      for(unsigned x = 0; x < i->width; x++) {
+        if(depth < 256) {
+          uint8_t r = image_pixel_8bit(i, x, y, R, (uint8_t)depth);
+          uint8_t g = image_pixel_8bit(i, x, y, G, (uint8_t)depth);
+          uint8_t b = image_pixel_8bit(i, x, y, B, (uint8_t)depth);
+          data[3 * (y * i->width + x) + 0] = r;
+          data[3 * (y * i->width + x) + 1] = g;
+          data[3 * (y * i->width + x) + 2] = b;
+        }
+      }
+    }
+    fwrite(data, 3 * i->height * i->width, 1, f);
+  } else {
+    for(unsigned y = 0; y < i->height; y++) {
+      for(unsigned x = 0; x < i->width; x++) {
         uint16_t r = image_pixel_16bit(i, x, y, R, (uint16_t)depth);
         uint16_t g = image_pixel_16bit(i, x, y, G, (uint16_t)depth);
         uint16_t b = image_pixel_16bit(i, x, y, B, (uint16_t)depth);

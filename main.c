@@ -1,5 +1,7 @@
 #include <stdio.h>
 #include <stdlib.h>
+#include <math.h>
+#include <string.h>
 
 #include "wind.h"
 #include "image.h"
@@ -18,7 +20,7 @@ int imageWidth = 1000;
 unsigned frames = 100;
 char* testPrefix;
 
-unsigned nsSize = 32;
+unsigned nsSize = 16;
 unsigned nsDepth = 4;
 
 char fileBuffer[256];
@@ -358,13 +360,13 @@ void test8() {
   
   //TODO use superluminescent colors to allow white mixing.
   float windColors[WIND_CURVES * 3] = {
-    0, 0, 2,
-    0, 2, 0,
-    2, 0, 0,
-    0, 2, 2,
-    2, 0, 2,
-    2, 2, 0,
-    2, 2, 2,
+    0, 0, 3,
+    0, 3, 0,
+    3, 0, 0,
+    0, 3, 3,
+    3, 0, 3,
+    3, 3, 0,
+    3, 3, 3,
     1, 1, 1,
   };
   
@@ -376,24 +378,38 @@ void test8() {
   
   //Closures for parametric curve functions
   void* cl[WIND_CURVES];
-  
+    
   for(unsigned i = 0; i < WIND_CURVES / 2; i++) {
     randomize_ccl_1(pc1_cl + i, imageWidth / 2, imageWidth / 2, imageWidth / 4);
-    randomize_ccl_2(pc2_cl + i, imageWidth / 2, imageWidth / 2, imageWidth / 2 * 8);
+    //Keep the amplitude low and the base high.
+    pc1_cl[i].base = (pc1_cl[i].base + imageWidth / 2) / 2;
+    pc1_cl[i].amplitude *= 0.5;
+    pc1_cl[i].frequency = 2 + pc1_cl[i].frequency / 4;
     
-    cl[i] = pc1_cl + i;
+    cl[i] = (void*) (pc1_cl + i);
     parametricCurves[i] = parametric_curve_1;
     
-    cl[i + WIND_CURVES / 2] = (void*) pc2_cl + i;
+    randomize_ccl_2(pc2_cl + i, imageWidth / 2, imageWidth / 2, imageWidth / 2);
+    for(unsigned j = 0; j < 4; j++) {
+      pc2_cl[i].d[j] *= 1.0 / 32.0;
+    }
+    
+    cl[i + WIND_CURVES / 2] = (void*) (pc2_cl + i);
     parametricCurves[i + WIND_CURVES / 2] = parametric_curve_2;
   }
+  
+  /*
+  for(unsigned i = 0; i < WIND_CURVES; i++) {
+    printf("%p\n", cl[i]);
+  }
+  */
   
   
   //Potential Function:
   noise_sum* ncl = initialize_noise_sum_2d(nsSize, nsDepth);
   noise_sum_scale_in(ncl, 1.0 / imageWidth);
 
-  centered_cl orbitcl = { imageWidth / 2.0, imageWidth / 2.0, 1000 * 1000, 100 };
+  centered_cl orbitcl = { imageWidth / 2.0, imageWidth / 2.0, imageWidth * imageWidth, 100 };
   
   float(*potentialFunctions[POTENTIAL_COUNT])(float, float, void*) = {
     noiseSumPotential,
@@ -403,23 +419,44 @@ void test8() {
   void* pcls[POTENTIAL_COUNT] = {ncl, &orbitcl};
   
   float weights[POTENTIAL_COUNT] = {
-    1000, 10
+    15, 1
   };
   
-  poly_weighted_cl pcl = { potentialFunctions, pcls, weights, POTENTIAL_COUNT};
+  poly_weighted_cl pcl = { potentialFunctions, pcls, weights, 1}; // POTENTIAL_COUNT};
   
   
+  //Tracers
+  
+  #define TRACER_COUNT 8
+  
+  //Offsets in time
+  float timeOffsets[TRACER_COUNT];
+  ccl_2 tracer_cl[TRACER_COUNT];
+  color tracer_color[TRACER_COUNT];
+  
+  memset(tracer_cl, 0, TRACER_COUNT * sizeof(ccl_2));
+  memset(tracer_color, 0, TRACER_COUNT * sizeof(color));
+  
+  for(unsigned i = 0; i < TRACER_COUNT; i++) {
+    tracer_cl[i].x0 = tracer_cl[i].y0 = -128;
+    timeOffsets[i] = 0;
+  }
+      
   //Move along the curves, adding to the wind.
   
-  float a = 1.0 / 8.0;
+  float a = 1.0 / 4.0;
   
-  float tStep = TAU / WSIZE;
+  unsigned cycles = 2.0;
+  float tStep = TAU * cycles / frames;
+  float drag = powf(0.5, tStep);
+  
   unsigned particleCount = 0;
   for(unsigned i = 0; i < frames; i++) {
-    if(i % 10 == 0) {
+    float t = tStep * i;
+    //if(i % 10 == 0) {
       printf("Frame %u / %u: Particles %u / %u\r", i, frames, particleCount, WSIZE * 3);
       fflush(stdout);
-    }
+    //}
     particleCount = 0;
     
     //Blur and darken the existing image.
@@ -429,32 +466,117 @@ void test8() {
     */
     
     if(i % 2 == 0) {
-      fill_image_a(img, 0, 0, 0, 1.0 / 32);
+      fill_image_a(img, 0, 0, 0, 1.0 / imageWidth);
     } else {
       image_blur_fast_inplace(img, i / 2);
     }
     
-    float t = tStep * i;
-    for(unsigned j = 0; j < 3; j++) { //Just draw 3 curves
+    if(i % 16 == 0) {
+      //Reset a curve
+      
+      unsigned idx = uniformInt(0, TRACER_COUNT);
+      assert(idx < TRACER_COUNT);
+      
+      randomize_ccl_2(tracer_cl + idx, imageWidth / 2, imageWidth / 2, imageWidth);
+      for(unsigned j = 0; j < 4; j++) {
+        tracer_cl[idx].d[j] *= 1.0 / 32.0;
+      }
+      
+      //Randomize color
+      tracer_color[idx].c[R] = uniformFloat(-1, 2);
+      tracer_color[idx].c[G] = uniformFloat(-1, 2);
+      tracer_color[idx].c[B] = uniformFloat(-1, 2);
+      tracer_color[idx].a = uniformFloat(-1, 1); //Negative alpha can cause some interesting effects (existing color is emphasized, new is subtracted).
+      
+      timeOffsets[idx] = t;
+    }
+    
+    /*
+    if(i % 64 == 0) {
+      randomize_ccl_2(&ccl, imageWidth / 2, imageWidth / 2, imageWidth);
+      
+      for(unsigned i = 0; i < 4; i++) {
+        ccl.d[i] *= 1.0 / 16.0;
+      }
+      
+      //draw_parametric_curve_uniform_space(img, draw_circle, parametric_curve_1, 0, TAU, 0.01, 8, 0.9, &drawcl_2, &cl);
+    }
+    */
+    
+    /*
+    float c2Speed = 1;
+    {
+      //color drawcl = {uniformFloat(0, 4), uniformFloat(0, 4), uniformFloat(0, 4), uniformFloat(1.0 / 16.0, 1)};
+      
+      color drawcl = {uniformFloat(-1, 2), uniformFloat(-1, 2), uniformFloat(-1, 2), uniformFloat(1.0 / 16.0, 1)};
+      
+      circle_cl drawcl_2 = {1, 0, 1, 0.5, 5.5};
+      
+      draw_parametric_curve_uniform_time(img, draw_point, parametric_curve_2, i % 64 * c2Speed, (i % 64 + 1) * c2Speed, 0.01, &drawcl, &ccl);
+      
+      //ccl.xS *= 0.95;
+      //ccl.yS *= 0.95;
+    }
+    */
+    
+    //Render a partial curve.
+    
+    
+    float tSpeed = 16;
+    for(unsigned j = 0; j < TRACER_COUNT; j++) {
+      float tt = (t - timeOffsets[j]) * tSpeed;
+      float tt2 = (t - timeOffsets[j] + tStep) * tSpeed;
+      
+      //draw_parametric_curve_uniform_time(img, draw_point, parametric_curve_2, 0, uniformFloat(0, 200), 0.01, &drawcl, cl[j]);
+      
+      draw_parametric_curve_uniform_time(img, draw_point, parametric_curve_2, tt, tt2, 0.01, &tracer_color[j], &tracer_cl[j]);
+      //color drawcl2 = {windColors[j * 3 + 1], windColors[j * 3 + 2], windColors[j * 3 + 0], 3};
+      //draw_parametric_curve_uniform_time(img, draw_point, parametricCurves[j], 0, tt, 0.01, &drawcl2, cl[j]);
+    }
+    
+    for(unsigned i = 0; i < TRACER_COUNT; i++) {
+      tracer_color[i].c[R] += uniformFloat(-0.125, 0.125);
+      tracer_color[i].c[G] += uniformFloat(-0.125, 0.125);
+      tracer_color[i].c[B] += uniformFloat(-0.125, 0.125);
+      tracer_color[i].a += uniformFloat(-0.125, 0.125);
+    }
+    
+    for(unsigned i = 0; i < WIND_CURVES * 3; i++) {
+      windColors[i] += uniformFloat(-0.125, 0.125);
+    }
+    
+    for(unsigned j = 0; j < WIND_CURVES; j++) {
+      //vec2 v = parametric_curve_1(t, &pc1_cl[j]);
+      //vec2 v2 = parametric_curve_1(t + EPSILON, &pc1_cl[j]);
       vec2 v = parametricCurves[j](t, cl[j]);
+      vec2 v2 = parametricCurves[j](t + EPSILON, cl[j]);
+      vec2 dcdt = vScale((tStep / EPSILON), vMinus(v2, v));
       
-      wind_remove_rand(winds[j], 64);
+      vec2 noise = vScale((tStep * 4.0), symmetricUnitBall());
+      vec2 dvdt = vPlus(vScale(1.0 / 2.0, dcdt), noise);
       
-      wind_append(winds[j], v.x, v.y, uniformFloat(-0.125, 0.125), uniformFloat(-0.125, 0.125), uniformFloat(1, 2));
       
-      //wind_update_bound(winds[j], 0.5, sumWeightedPotential, &pcl, -imageWidth / 2.0, -imageWidth / 2.0, 3.0 * imageWidth / 2, 3.0 * imageWidth / 2);
-      wind_update(winds[j], 1.0, sumWeightedPotential, &pcl);
+      wind_remove_rand(winds[j], 256);
+      
+      
+      wind_scale_velocity(winds[j], drag);
+      wind_append(winds[j], v.x, v.y, dvdt.x, dvdt.y, uniformFloat(1, 2));
+      
+      wind_update_bound(winds[j], 1.0, sumWeightedPotential, &pcl, -imageWidth / 2.0, -imageWidth / 2.0, 3.0 * imageWidth / 2, 3.0 * imageWidth / 2);
+      //wind_update(winds[j], 0.5, sumWeightedPotential, &pcl);
 
       //Draw the wind.
       //wind_draw(winds[j], img, windColors[j * 3 + 0], windColors[j * 3 + 1], windColors[j * 3 + 2], a, 0, 0, 1);
-      wind_draw_roffset(winds[j], img, windColors[j * 3 + 0], windColors[j * 3 + 1], windColors[j * 3 + 2], a, 0, 0, 1, 3, 3);
+      wind_draw_roffset(winds[j], img, windColors[j * 3 + 0], windColors[j * 3 + 1], windColors[j * 3 + 2], a, 0, 0, 1, 4, 4);
       
       particleCount += winds[j]->particles;
+      
+      //TODO want to change the noise over time so wind does not collect in low pressure areas. 
     }
     
     //Render
     char path[128];
-    sprintf(path, "test_video/%04u.ppm", i);
+    sprintf(path, "test_video/%05u.ppm", i);
     FILE* f = fopen(path, "wb");
     image_write_ppm(img, f, 255);
     fclose(f);

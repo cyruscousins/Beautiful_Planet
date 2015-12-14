@@ -12,11 +12,9 @@
 float vL2Sqr(vec2 a) {
   return a.x * a.x + a.y * a.y;
 }
-/*
 float vL1(vec2 a) {
-  return abs(a.x) + abs(a.y);
+  return fabs(a.x) + fabs(a.y);
 }
-*/
 
 vec2 vPlus(vec2 a, vec2 b) {
   vec2 result = { a.x + b.x, a.y + b.y };
@@ -40,6 +38,17 @@ float vDSqr(vec2 a, vec2 b) {
 float vDistance(vec2 a, vec2 b) {
   return sqrtf(vL2Sqr(vMinus(a, b)));
 }
+
+
+vec2 uniformUnitCirc() {
+  float theta = uniformFloat(0, TAU);
+  vec2 result = { cosf(theta), sinf(theta) };
+  return result;
+}
+vec2 symmetricUnitBall() {
+  return vScale(rfloat(), uniformUnitCirc());
+}
+
 
 vec2 ddt(vec2 (*f)(float t, void* cl), float t, void* cl) {
   vec2 v0 = f(t, cl);
@@ -125,11 +134,12 @@ void randomize_ccl_1(ccl_1* cl, float x0, float y0, float scale) {
 void randomize_ccl_2(ccl_2* ccl, float x0, float y0, float scale) {
   for(unsigned i = 0; i < 4; i++) {
     ccl->d[i] = uniformFloat(0, 1) * uniformFloat(0, 1);
+    ccl->d[i] *= ccl->d[i];
     ccl->f[i] = uniformFloat(0, 1);
     ccl->p[i] = uniformFloat(0, TAU);
   }
   ccl->x0 = x0;
   ccl->y0 = y0;
-  ccl->xS = ccl->yS = scale;
+  ccl->xS = ccl->yS = scale / 4; //Divide by number of summands.
 }
 

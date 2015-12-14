@@ -1,8 +1,9 @@
 
-#CFLAGS=-O1 -g3 -Wall -Wno-unused-function
+DBGFLAGS=-O1 -g3 -Wall -Wno-unused-function -DDEBUG
+OPTFLAGS=-Ofast -ffast-math -DNDEBUG -march=native -g#-m32 #Causes a compiler issue: probably 32 bit library related.
 
-OPTFLAGS=-Ofast -ffast-math -DNDEBUG -march=native #-m32 #Causes a compiler issue: probably 32 bit library related.
-CFLAGS=$(OPTFLAGS) -flto
+CFLAGS=$(DBGFLAGS)
+#CFLAGS=$(OPTFLAGS) -flto
 
 LFLAGS=$(OPTFLAGS) -lm
 LIB=-lm
@@ -24,14 +25,17 @@ draw.o: draw.c draw.h image.h
 potentials.o: potentials.c potentials.h
 	gcc $(CFLAGS) potentials.c -c
 
-noise.o: noise.c noise.h
+noise.o: noise.c noise.h convolution.h
 	gcc $(CFLAGS) noise.c -c
 
 parametric.o: parametric.c parametric.h image.h
 	gcc $(CFLAGS) parametric.c -c
 
-test: wind.o image.o main.o draw.o potentials.o noise.o parametric.o
-	gcc $(LFLAGS) wind.o image.o main.o draw.o potentials.o noise.o parametric.o $(LIB) -o test
+convolution.o: convolution.c convolution.h
+	gcc $(CFLAGS) convolution.c -c
+
+test: wind.o image.o main.o draw.o potentials.o noise.o parametric.o convolution.o
+	gcc $(LFLAGS) wind.o image.o main.o draw.o potentials.o noise.o parametric.o convolution.o $(LIB) -o test
 
 clean:
 	rm *.o *.gch

@@ -61,5 +61,34 @@ vec2 parametric_curve_2(float t, void* cl);
 
 //vec2 noise_curve_transformer()
 
+//Used for hypocycloids and epicycloids.
+typedef struct cycloid {
+  float x0, y0, theta0;
+  float rb, r, a;
+} cycloid;
+
+void randomize_hypocycloid(cycloid* ccl, float x0, float y0, float scale);
+void randomize_epicycloid(cycloid* ccl, float x0, float y0, float scale);
+
+vec2 hypocycloid(float t, void* ccl);
+vec2 epicycloid(float t, void* ccl);
+
+//Weighted sums of parametric curves.
+typedef struct weighted_sum_pcl {
+  void** cl;
+  vec2 (**f)(float, void*);
+  float* weights;
+  float* timeFactors;
+  float* timeSummands;
+  unsigned count;
+} weighted_sum_pcl;
+
+vec2 parametric_curve_point(float t, void* cl);
+
+vec2 parametric_curve_weighted_sum(float t, void* cl);
+
+weighted_sum_pcl* randomize_weighted_sum(float x0, float y0, float scale, unsigned maxComponents);
+void free_weighted_sum(weighted_sum_pcl* w);
+
 #endif
 

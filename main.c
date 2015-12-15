@@ -185,13 +185,17 @@ void test6() {
   color drawcl = {0, 0, 0, 1};
   circle_cl drawcl_2 = {1, 0, 1, 0.5, 5.5};
   
-  #define REPLICANTS 4
+  #define REPLICANTS 8
+  #define ROWS 5
   for(unsigned x = 0; x < REPLICANTS; x++) {
-    //Draw the first parametric curve type here.
-    
     float x0 = (x + 0.5) * imageWidth / REPLICANTS;
-    float y0 = imageWidth / 3.0;
+    float y0 = imageWidth * 0.5 / ROWS;
     float scale = imageWidth * 0.5 / REPLICANTS;
+    
+    float spacing = 10.0 / imageWidth;
+    
+    
+    //Draw the first parametric curve type here.
     
     ccl_1 cl;
     randomize_ccl_1(&cl, x0, y0, scale);
@@ -201,22 +205,41 @@ void test6() {
     
     //Draw the second parametric curve type here.
     
-    y0 = imageWidth * 2 / 3;
+    y0 = imageWidth * 1.5 / ROWS;
     
     ccl_2 cl2;
     randomize_ccl_2(&cl2, x0, y0, scale);
     
-    /*
-    printf("%f %f %f %f", cl2.x0, cl2.y0, cl2.xS, cl2.yS);
-    for(unsigned i = 0; i < 4; i++) {
-      printf(" %f %f %f", cl2.d[i], cl2.f[i], cl2.p[i]);
-    }
-    printf("\n");
-    */
-    
     //draw_parametric_curve_uniform_time(img, draw_circle, parametric_curve_2, 0, TAU, 0.01 / scale, &drawcl_2, &cl2);
-    draw_parametric_curve_uniform_time(img, draw_point, parametric_curve_2, 0, 100, 0.01, &drawcl, &cl2);
-    draw_parametric_curve_uniform_space(img, draw_circle, parametric_curve_2, 0, 100, 0.01, 8, 0.9, &drawcl_2, &cl2);
+    draw_parametric_curve_uniform_time(img, draw_point, parametric_curve_2, 0, 100, spacing, &drawcl, &cl2);
+    draw_parametric_curve_uniform_space(img, draw_circle, parametric_curve_2, 0, 100, spacing, 8, 0.9, &drawcl_2, &cl2);
+    
+    //Draw the third parametric curve type here.
+    
+    y0 = imageWidth * 2.5 / ROWS;
+    
+    cycloid cl3;
+    randomize_hypocycloid(&cl3, x0, y0, scale);
+    draw_parametric_curve_uniform_time(img, draw_point, hypocycloid, 0, 100, spacing, &drawcl, &cl3);
+    draw_parametric_curve_uniform_space(img, draw_circle, hypocycloid, 0, 100, spacing, 8, 0.9, &drawcl_2, &cl3);
+    
+    //Draw the fourth parametric curve type here.
+    y0 = imageWidth * 3.5 / ROWS;
+    
+    cycloid cl4;
+    randomize_epicycloid(&cl4, x0, y0, scale);
+    draw_parametric_curve_uniform_time(img, draw_point, epicycloid, 0, 100, spacing, &drawcl, &cl4);
+    draw_parametric_curve_uniform_space(img, draw_circle, epicycloid, 0, 100, spacing, 8, 0.9, &drawcl_2, &cl4);
+    
+    
+    //Draw the fifth (sum) parametric curve type here.
+    y0 = imageWidth * 4.5 / ROWS;
+    
+    weighted_sum_pcl* cl5 = randomize_weighted_sum(x0, y0, scale, 8);
+    draw_parametric_curve_uniform_time(img, draw_point, parametric_curve_weighted_sum, 0, 100, spacing * 0.1, &drawcl, cl5);
+    //draw_parametric_curve_uniform_space(img, draw_circle, parametric_curve_weighted_sum, 0, 100, spacing, 8, 0.9, &drawcl_2, cl5);
+    
+    free_weighted_sum(cl5);
   }
   
   FILE* f = fopen("test6.ppm", "wb");

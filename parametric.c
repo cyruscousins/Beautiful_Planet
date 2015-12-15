@@ -162,3 +162,117 @@ void randomize_ccl_2(ccl_2* ccl, float x0, float y0, float scale) {
   }
 }
 
+void randomize_hypocycloid(cycloid* ccl, float x0, float y0, float scale) {
+  ccl->x0 = x0;
+  ccl->y0 = y0;
+  ccl->theta0 = uniformFloat(0, TAU);
+  
+  ccl->rb = scale;
+  ccl->r = scale / uniformInt(2, 17);
+  ccl->a = uniformFloat(0, 4 * ccl->r);
+}
+
+void randomize_epicycloid(cycloid* ccl, float x0, float y0, float scale) {
+  randomize_hypocycloid(ccl, x0, y0, scale);
+}
+
+vec2 hypocycloid(float t, void* ccl) {
+  cycloid* cl = ccl;
+  vec2 result = {(cl->rb - cl->r) * cosf(cl->r / cl->rb * t) + cl->a * cosf((1 - cl->r / cl->rb) * t), (cl->rb - cl->r) * sinf(cl->r / cl-> rb * t) - cl->a * sinf((1 - cl->r / cl->rb) * t)};
+  
+  vec2 offset = {cl->x0, cl->y0};
+  
+  return vPlus(vRotate(result, cl->theta0), offset);
+}
+vec2 epicycloid(float t, void* ccl) {
+  cycloid* cl = ccl;
+  vec2 result = {(cl->rb + cl->r) * cosf(cl->r / cl->rb * t) - cl->a * cosf((1 + cl->r / cl->rb) * t), (cl->rb + cl->r) * sinf(cl->r / cl-> rb * t) - cl->a * sinf((1 + cl->r / cl->rb) * t)};
+  
+  vec2 offset = {cl->x0, cl->y0};
+  
+  return vPlus(vRotate(result, cl->theta0), offset);
+}
+
+vec2 parametric_curve_weighted_sum(float t, void* cl) {
+  weighted_sum_pcl* pcl = cl;
+  vec2 result = {0, 0};
+  for(unsigned i = 0; i < pcl->count; i++) {
+    float tt = t * pcl->timeFactors[i] + pcl->timeSummands[i];
+    vec2 vv = pcl->f[i](tt, pcl->cl[i]);
+    result = vPlus(result, vScale(pcl->weights[i], vv));
+  }
+  return result;
+}
+
+vec2 parametric_curve_point(float t, void* cl) {
+  vec2* vcl = cl;
+  return *vcl;
+}
+
+weighted_sum_pcl* randomize_weighted_sum(float x0, float y0, float scale, unsigned maxComponents) {
+  assert(maxComponents > 1);
+  unsigned count = uniformInt(2, 1 + 1 + maxComponents);
+  
+  weighted_sum_pcl* w = malloc(sizeof(weighted_sum_pcl));
+  w->count = count;
+  
+  w->cl = malloc(sizeof(void*) * count);
+  w->f = malloc(sizeof(void*) * count);
+  w->weights = malloc(sizeof(float) * count);
+  w->timeFactors = malloc(sizeof(float) * count);
+  w->timeSummands = malloc(sizeof(float) * count);
+  
+  vec2 p = {x0, y0};
+  w->cl[0] = malloc(sizeof(vec2));
+  *((vec2*)w->cl[0]) = p;
+  w->f[0] = parametric_curve_point;
+  w->weights[0] = 1;
+  w->timeFactors[0] = w->timeSummands[0] = 0;
+  
+  for(unsigned i = 1; i < count; i++) {
+    unsigned type = uniformInt(0, 4);
+    
+    w->weights[i] = uniformFloat(EPSILON, 2);
+    w->timeFactors[i] = uniformFloat(1.0 / 2.0, 2);
+    w->timeSummands[i] = uniformFloat(0, TAU);
+    
+    switch(type) {
+      case 0:
+        w->cl[i] = malloc(sizeof(ccl_1));
+        w->f[i] = parametric_curve_1;
+        randomize_ccl_1(w->cl[i], 0, 0, scale / count);
+        break;
+      case 1:
+        w->cl[i] = malloc(sizeof(ccl_2));
+        w->f[i] = parametric_curve_2;
+        randomize_ccl_2(w->cl[i], 0, 0, scale / count);
+        w->timeFactors[i] = 1;
+        break;
+      case 2:
+        w->cl[i] = malloc(sizeof(cycloid));
+        w->f[i] = hypocycloid;
+        randomize_hypocycloid(w->cl[i], 0, 0, scale / count);
+        break;
+      case 3:
+        w->cl[i] = malloc(sizeof(cycloid));
+        w->f[i] = epicycloid;
+        randomize_epicycloid(w->cl[i], 0, 0, scale / count);
+        break;
+      default:
+        assert(0);
+        break;
+    }
+  }
+  return w;
+}
+
+void free_weighted_sum(weighted_sum_pcl* w) {
+  for(unsigned i = 0; i < w->count; i++) {
+    free(w->cl[i]);
+  }
+  free(w->cl);
+  free(w->f);
+  free(w->timeFactors);
+  free(w->timeSummands);
+}
+

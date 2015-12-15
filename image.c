@@ -45,7 +45,7 @@ void image_write_ppm(image* i, FILE* f, uint16_t depth) {
   fprintf(f, "P6\n%u %u %u\n", i->width, i->height, depth);
   if(depth < 256) {
     //Fast path for low bitrate images.
-    char data[3 * i->height * i->width];
+    char* data = malloc(3 * i->height * i->width);
     for(unsigned y = 0; y < i->height; y++) {
       for(unsigned x = 0; x < i->width; x++) {
         uint8_t r = image_pixel_8bit(i, x, y, R, (uint8_t)depth);
@@ -57,6 +57,7 @@ void image_write_ppm(image* i, FILE* f, uint16_t depth) {
       }
     }
     fwrite(data, 3 * i->height * i->width, 1, f);
+    free(data);
   } else {
     for(unsigned y = 0; y < i->height; y++) {
       for(unsigned x = 0; x < i->width; x++) {

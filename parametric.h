@@ -15,8 +15,11 @@ float vDot(vec2 a, vec2 b);
 float vDSqr(vec2 a, vec2 b);
 float vDistance(vec2 a, vec2 b);
 
+vec2 vRotate(vec2 a, float theta);
+
 vec2 uniformUnitCirc();
 vec2 symmetricUnitBall();
+vec2 symmetricBall(float radius);
 
 //Generic functions for working with parametric curves.
 
@@ -42,13 +45,14 @@ void randomize_ccl_1(ccl_1* ccl, float x0, float x1, float scale);
 
 vec2 parametric_curve_1(float t, void* cl);
 
+#define PC2_SUMMANDS 4
 //Harmonograph based curves
 //TODO would be more interesting to generalize.
 typedef struct ccl_2 {
-  float x0, y0, xS, yS;
-  float d[4];
-  float f[4];
-  float p[4];
+  float x0, y0, scale, theta;
+  float d[PC2_SUMMANDS];
+  float f[PC2_SUMMANDS];
+  float p[PC2_SUMMANDS];
 } ccl_2;
 
 void randomize_ccl_2(ccl_2* ccl, float x0, float x1, float scale);

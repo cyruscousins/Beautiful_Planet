@@ -2,6 +2,10 @@
 #define NOISE_H
 
 #include <stdlib.h>
+#include <inttypes.h>
+
+void seed_lcg(uint32_t seed);
+unsigned rand_lcg_global();
 
 float rfloat();
 int uniformInt(int x0, int x1);

@@ -103,8 +103,8 @@ void image_blur_fast_inplace(image* i, unsigned br) {
   
   for(unsigned c = 0; c < C; c++) {
     //TODO could phase color channels.
-    o = !o;
     for(unsigned y = y0; y < y1; y++) {
+      o = !o;
       for(unsigned x = x0 + o; x < x1; x += 2) {
         ch[c][y * w + x] = avgNeighbors(ch[c], x, y, w, h);
       }

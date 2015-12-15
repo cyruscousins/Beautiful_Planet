@@ -3,6 +3,8 @@
 
 #include <math.h>
 
+#include <stdio.h>
+
 #define PI 3.14159627
 #define TAU (2*PI)
 #define EPSILON 0.0000001
@@ -32,6 +34,13 @@ float vDot(vec2 a, vec2 b) {
   return a.x * b.x + a.y * b.y;
 }
 
+vec2 vRotate(vec2 a, float theta) {
+  float cost = cosf(theta);
+  float sint = sinf(theta);
+  vec2 result = {a.x * cost - a.y * sint, a.x * sint + a.y * cost};
+  return result;
+}
+
 float vDSqr(vec2 a, vec2 b) {
   return vL2Sqr(vMinus(a, b));
 }
@@ -47,6 +56,9 @@ vec2 uniformUnitCirc() {
 }
 vec2 symmetricUnitBall() {
   return vScale(rfloat(), uniformUnitCirc());
+}
+vec2 symmetricBall(float radius) {
+  return vScale(rfloat() * radius, uniformUnitCirc());
 }
 
 
@@ -66,7 +78,6 @@ void draw_parametric_curve_uniform_time(image* img, void (*draw)(image*, unsigne
   }
 }
 
-#include <stdio.h>
 void draw_parametric_curve_uniform_space(image* img, void (*draw)(image*, unsigned, unsigned, void*), vec2 (*f)(float t, void* cl), float t0, float t1, float s0, float spacing, float tolerance, void* cl1, void* cl2) {
   assert(tolerance > 0 && tolerance < 1);
   vec2 last;
@@ -114,10 +125,16 @@ vec2 parametric_curve_1(float t, void* cl) {
 vec2 parametric_curve_2(float t, void* cl) {
   ccl_2* ccl = cl;
   
-  vec2 result = { (expf(-ccl->d[1 - 1] * t) * sinf(t * ccl->f[1 - 1] + ccl->p[1 - 1]) + expf(-ccl->d[2 - 1] * t) * sinf(t * ccl->f[2 - 1] + ccl->p[2 - 1])) * ccl->xS + ccl->x0, (expf(-ccl->d[3 - 1] * t) * sinf(t * ccl->f[3 - 1] + ccl->p[3 - 1]) + expf(-ccl->d[4 - 1] * t) * sinf(t * ccl->f[4 - 1] + ccl->p[4 - 1])) * ccl->yS + ccl->y0 };
+  vec2 result = {0, 0};
+  for(unsigned i = 0; i < PC2_SUMMANDS / 2; i++) {
+    result.x += expf(-ccl->d[i] * t) * sinf(t * ccl->f[i] + ccl->p[i]);
+    unsigned j = PC2_SUMMANDS / 2 + i;
+    result.y += expf(-ccl->d[j] * t) * sinf(t * ccl->f[j] + ccl->p[j]);
+  }
   
-  //printf("%f %f %f (%f %f)\n", t, result.x, result.y, ccl->x0, ccl->y0);
-  return result;
+  vec2 offset = {ccl->x0, ccl->y0};
+  
+  return vPlus(vRotate(vScale(ccl->scale, result), ccl->theta), offset);
 }
 
 
@@ -132,14 +149,16 @@ void randomize_ccl_1(ccl_1* cl, float x0, float y0, float scale) {
 }
 
 void randomize_ccl_2(ccl_2* ccl, float x0, float y0, float scale) {
-  for(unsigned i = 0; i < 4; i++) {
-    ccl->d[i] = uniformFloat(0, 1) * uniformFloat(0, 1);
-    ccl->d[i] *= ccl->d[i];
+  ccl->x0 = x0;
+  ccl->y0 = y0;
+  ccl->scale = scale * 2 / PC2_SUMMANDS;
+  ccl->theta = uniformFloat(0, TAU);
+  float d = 1;
+  for(unsigned i = 0; i < PC2_SUMMANDS; i++) {
+    d *= uniformFloat(EPSILON, 1);
+    ccl->d[i] = d;
     ccl->f[i] = uniformFloat(0, 1);
     ccl->p[i] = uniformFloat(0, TAU);
   }
-  ccl->x0 = x0;
-  ccl->y0 = y0;
-  ccl->xS = ccl->yS = scale / 4; //Divide by number of summands.
 }
 

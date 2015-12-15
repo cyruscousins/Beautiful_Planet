@@ -7,6 +7,18 @@
 
 #define EPSILON 0.0001
 
+//Here's an LCG.  Using rand() has a lot of overhead.
+uint32_t lcg = 12191989;
+void seed_lcg(uint32_t seed) {
+  lcg = seed;
+}
+unsigned rand_lcg_global() {
+  lcg = 69069 * lcg;
+  return ++lcg;
+}
+
+
+
 float rfloat() {
   return rand() / (float)RAND_MAX;
 }

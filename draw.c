@@ -1,7 +1,16 @@
 
+#include <stdio.h>
+
 #include "draw.h"
 #include "image.h"
 #include "noise.h"
+
+void randomize_color(color* c, float cLow, float cHigh, float alpha) {
+  for(unsigned i = 0; i < C; i++) {
+    c->c[i] = uniformFloat(cLow, cHigh);
+  }
+  c->a = alpha;
+}
 
 void fill_rect(image* i, unsigned x0, unsigned y0, unsigned x1, unsigned y1, float r, float g, float b) {
   assert(x1 <= i->width);
@@ -65,13 +74,23 @@ void fill_rect_f_bw(image* i, unsigned x0, unsigned y0, unsigned x1, unsigned y1
 float noisePaint(unsigned x, unsigned y, void* cl) {
   return noise_sum_2d(x, y, cl);
 }
-#include <stdio.h>
+
+
+
 void draw_point(image* img, unsigned x, unsigned y, void* cl) {
   color* col = cl;
   if(x < img->width && y < img->width) {
     for(unsigned c = 0; c < C; c++) {
       float* p = image_pixel(img, x, y, c);
       *p = *p * (1 - col->a) + col->c[c] * col->a;
+    }
+  }
+}
+void draw_point_additive(image* img, unsigned x, unsigned y, void* cl) {
+  color* col = cl;
+  if(x < img->width && y < img->width) {
+    for(unsigned c = 0; c < C; c++) {
+      *image_pixel(img, x, y, c) += col->c[c];
     }
   }
 }

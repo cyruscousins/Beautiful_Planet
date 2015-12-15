@@ -2,10 +2,10 @@
 DBGFLAGS=-O1 -g3 -Wall -Wno-unused-function -DDEBUG
 OPTFLAGS=-Ofast -ffast-math -DNDEBUG -march=native -g#-m32 #Causes a compiler issue: probably 32 bit library related.
 
-CFLAGS=$(DBGFLAGS)
-#CFLAGS=$(OPTFLAGS) -flto
+#CFLAGS=$(DBGFLAGS)
+CFLAGS=$(OPTFLAGS) -std=c11 -flto
 
-LFLAGS=$(OPTFLAGS) -lm
+LFLAGS=$(OPTFLAGS) -flto
 LIB=-lm
 
 all: test

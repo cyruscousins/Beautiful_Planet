@@ -4,6 +4,7 @@
 
 #include "wind.h"
 #include "noise.h"
+#include "parametric.h"
 
 typedef char bool;
 
@@ -137,15 +138,16 @@ void wind_draw(wind* w, image* img, float r, float g, float b, float a, float x0
     *bv = *bv * (1 - a) + a * b;
   }
 }
-void wind_draw_roffset(wind* w, image* img, float r, float g, float b, float a, float x0, float y0, float scale, unsigned copies, unsigned maxOffset) {
+void wind_draw_roffset(wind* w, image* img, float r, float g, float b, float a, float x0, float y0, float scale, unsigned copies, float spread) {
   //assert(bounded01(r) && bounded01(g) && bounded01(b) && bounded01(a));
   for(unsigned i = 0; i < w->particles; i++) {
     //Translate, scale, and offset to to make truncation round properly.
     float xf = (wind_x(w)[i] - x0) / scale + 0.5;
     float yf = (wind_y(w)[i] - y0) / scale + 0.5;
     for(unsigned j = 0; j < copies; j++) {
-      unsigned x = (unsigned)(xf + uniformInt(-maxOffset, maxOffset));
-      unsigned y = (unsigned)(yf + uniformInt(-maxOffset, maxOffset));
+      vec2 s = symmetricBall(spread);
+      unsigned x = (unsigned)(xf + s.x);
+      unsigned y = (unsigned)(yf + s.y);
       
       if(x < 0 || x >= img->width || y < 0 || y >= img->height) continue;
 

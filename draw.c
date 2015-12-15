@@ -24,19 +24,19 @@ void fill_rect(image* i, unsigned x0, unsigned y0, unsigned x1, unsigned y1, flo
   }
 }
 
+
+void image_fill_channel(image* i, unsigned c, float f) {
+  assert(c < C);
+  float* b = image_pixel(i, 0, 0, c);
+  for(unsigned p = 0; p < i->width * i->height; p++) {
+    b[p] = f;
+  }
+}
+
 void fill_image(image* i, float r, float g, float b) {
-  float* c;
-  c = image_pixel(i, 0, 0, R);
-  for(unsigned p = 0; p < i->width * i->height; p++) {
-    c[p] = r;
-  }
-  c = image_pixel(i, 0, 0, G);
-  for(unsigned p = 0; p < i->width * i->height; p++) {
-    c[p] = g;
-  }
-  c = image_pixel(i, 0, 0, B);
-  for(unsigned p = 0; p < i->width * i->height; p++) {
-    c[p] = b;
+  float colors[3] = {r, g, b};
+  for(unsigned c = 0; c < C; c++) {
+    image_fill_channel(i, c, colors[c]);
   }
 }
 
@@ -57,6 +57,20 @@ void fill_image_a(image* i, float r, float g, float b, float a) {
   c = image_pixel(i, 0, 0, B);
   for(unsigned p = 0; p < i->width * i->height; p++) {
     c[p] = c[p] * oa + b;
+  }
+}
+
+void image_multiply_channel(image* i, unsigned c, float f) {
+  assert(c < C);
+  float* b = image_pixel(i, 0, 0, c);
+  for(unsigned p = 0; p < i->width * i->height; p++) {
+    b[p] *= f;
+  }
+}
+void image_multiply(image* i, float f) {
+  float* b = image_pixel(i, 0, 0, 0);
+  for(unsigned p = 0; p < i->width * i->height * C; p++) {
+    b[p] *= f;
   }
 }
 

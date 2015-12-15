@@ -31,7 +31,7 @@ void image_free(image* i);
 
 float* image_pixel(image* i, unsigned x, unsigned y, unsigned c);
 
-static double clamp(float f, float f0, float f1) {
+static float clamp(float f, float f0, float f1) {
   assert(f0 <= f1);
   if(f < f0) {
     return f0;

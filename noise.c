@@ -17,10 +17,10 @@ unsigned rand_lcg_global() {
   return ++lcg;
 }
 
-
+unsigned lcg_max = 0xffffffff;
 
 float rfloat() {
-  return rand() / (float)RAND_MAX;
+  return rand_lcg_global() / (float)lcg_max;
 }
 
 int uniformInt(int x0, int x1){

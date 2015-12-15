@@ -350,9 +350,11 @@ void test8() {
   //Parameterization:
   unsigned wind_count = 8; //Number of particle emmiters.
   unsigned wind_size = 1000; //Max number of particles per emitter.
+  unsigned particlesPerFrame = 2000 / frames;
+  if(particlesPerFrame == 0) particlesPerFrame = 1;
   
-  unsigned particlesToDraw = 3;
-  float maxSpread = imageWidth / 300.0;
+  unsigned particlesToDraw = 2;
+  float maxSpread = imageWidth / 500.0;
   
   float particleNoiseVelocity = imageWidth / (32.0 * 1000.0);
   float particleEmitterMomentumScalar = 0.25;
@@ -362,11 +364,11 @@ void test8() {
   float wColorRevert = 0.01; //TODO these should be exponentiated by tStep
   float wColorChange = 0.125;
   
-  float wAlpha = 1.0 / 4.0; //Alpha to use for drawing the wind.
+  float wAlpha = 1.0 / 8.0; //Alpha to use for drawing the wind.
   
   unsigned tracer_count = 8; //Number of traced curves.
   float tracerColorChange = 0.125;
-  float tracerColorReduction = 0.85;
+  float tracerColorReduction = 0.9;
   
   ////////////////////
   //Particle Emitters:
@@ -426,7 +428,7 @@ void test8() {
   noise_sum* ncl = initialize_noise_sum_2d(nsSize, nsDepth);
   noise_sum_scale_in(ncl, 1.0 / imageWidth);
 
-  centered_cl orbitcl = { imageWidth / 2.0, imageWidth / 2.0, imageWidth * imageWidth, 100 };
+  centered_cl orbitcl = { imageWidth / 2.0, imageWidth / 2.0, imageWidth * imageWidth, (imageWidth / 16.0) * (imageWidth / 16.0) };
   
   float(*potentialFunctions[POTENTIAL_COUNT])(float, float, void*) = {
     noiseSumPotential,
@@ -436,10 +438,10 @@ void test8() {
   void* pcls[POTENTIAL_COUNT] = {ncl, &orbitcl};
   
   float weights[POTENTIAL_COUNT] = {
-    15, 1
+    25, 1.25
   };
   
-  poly_weighted_cl pcl = { potentialFunctions, pcls, weights, 1}; // POTENTIAL_COUNT};
+  poly_weighted_cl pcl = { potentialFunctions, pcls, weights, POTENTIAL_COUNT};
   
   //////////
   //Tracers:
@@ -487,22 +489,45 @@ void test8() {
     */
     
     if(i % 2 == 0) {
-      fill_image_a(img, 0, 0, 0, 32.0 / imageWidth);
+      float m = 1.0 - 64.0 / imageWidth;
+      if(m < 0) m = 0;
+      //Darken one color channel at a time.
+      image_multiply_channel(img, (i / 2) % 3, m);
+      //fill_image_a(img, 0, 0, 0, 32.0 / imageWidth);
     } else {
       image_blur_fast_inplace(img, i / 2);
     }
     
+    //"Gravity Vortex": bend light inward.  (TODO move this to filters).
+    /*
+    for(unsigned i = 0; i < imageWidth * imageWidth / 128; i++) {
+      vec2 p = symmetricBall(imageWidth / 4);
+      unsigned x0 = imageWidth / 2 + (unsigned)p.x;
+      unsigned y0 = imageWidth / 2 + (unsigned)p.y;
+      unsigned x1 = imageWidth / 2 + (unsigned)(p.x * 1.125);
+      unsigned y1 = imageWidth / 2 + (unsigned)(p.y * 1.125);
+      for(unsigned c = 0; c < C; c++) {
+        float* p0 = image_pixel(img, x0, y0, c);
+        float* p1 = image_pixel(img, x1, y1, c);
+        *p0 = (*p0 + *p1 * 0.75);
+        *p1 *= 0.25;
+      }
+    }
+    */
+    
     //image_blur_fast_inplace(img, i);
     //image_blur_fast_inplace(img, i + 1);
     
-    if(i % 16 == 0) {
+    if(i % 32 == 0) {
       //Reset a curve
       unsigned idx = uniformInt(0, tracer_count);
       
       randomize_ccl_2(tracer_cl + idx, imageWidth / 2, imageWidth / 2, imageWidth / 2);
+      
       for(unsigned j = 0; j < 4; j++) {
         tracer_cl[idx].d[j] *= 1.0 / 32.0;
       }
+      
       
       //Randomize color.
       //randomize_color(tracer_color + idx, -0.5, 1.5, 1);
@@ -543,10 +568,11 @@ void test8() {
     
     //Render a partial curve.
     
-    float tSpeed = 16;
+    float tSpeed = 16.0;
     for(unsigned j = 0; j < tracer_count; j ++) {
+      float renderSpacing = (1.0 / tracer_cl[j].scale) * (1.0);
       
-      float renderSpacing = 500.0 * (1.0 / tracer_cl->scale) * (1.0 / 100);
+      if(tracer_cl[j].scale < 1) continue;
       
       //Draw a partial curve
       if(j < tracer_count / 2) {
@@ -556,18 +582,18 @@ void test8() {
         
         //draw_parametric_curve_uniform_time(img, draw_point, parametric_curve_2, 0, uniformFloat(0, 200), 0.01, &drawcl, cl[j]);
         
-        draw_parametric_curve_uniform_time(img, draw_point_additive, parametric_curve_2, tt, tt2, renderSpacing, &tracer_color[j], &tracer_cl[j]);
+        draw_parametric_curve_uniform_time(img, draw_point_additive, parametric_curve_2, tt, tt2, renderSpacing * 0.1, &tracer_color[j], &tracer_cl[j]);
         //color drawcl2 = {windColors[j * 3 + 1], windColors[j * 3 + 2], windColors[j * 3 + 0], 3};
         //draw_parametric_curve_uniform_time(img, draw_point, parametricCurves[j], 0, tt, 0.01, &drawcl2, cl[j]);
       } else {
         //Flash and permute a full curve.
         
-        if(uniformInt(0, 3) == 0) {
+        if(uniformInt(0, 2) == 0) {
           continue;
         }
         
         float sd = 32.0;
-        float pd = TAU / 64.0;
+        float pd = TAU / 128.0;
         
         tracer_cl[j].scale *= uniformFloat((sd - 1) / sd, (sd + 1) / sd); //Should shrink slightly over time.
         tracer_cl[j].theta += uniformFloat(-pd, pd);
@@ -586,7 +612,7 @@ void test8() {
           tracer_cl[j].p[i] += uniformFloat(-pd, pd);
         }
         
-        draw_parametric_curve_uniform_time(img, draw_point_additive, parametric_curve_2, 0, uniformFloat(0, 200), renderSpacing * 2, &tracer_color[j], &tracer_cl[j]);
+        draw_parametric_curve_uniform_time(img, draw_point_additive, parametric_curve_2, 0, uniformFloat(0, 200), renderSpacing * (1 + uniformFloat(0, 1)), &tracer_color[j], &tracer_cl[j]);
       }
     }
     
@@ -594,7 +620,7 @@ void test8() {
     for(unsigned i = 0; i < tracer_count; i++) {
       for(unsigned c = 0; c < C; c++) {
         tracer_color[i].c[c] += uniformFloat(-tracerColorChange, tracerColorChange);
-        tracer_color[i].c[c] *= tracerColorReduction;
+        tracer_color[i].c[c] *= uniformFloat(tracerColorReduction, 1);
       }
       //tracer_color[i].a += uniformFloat(-tracerColorChange, tracerColorChange);
       //tracer_color[i].a *= tracerColorReduction;
@@ -605,27 +631,29 @@ void test8() {
     }
     
     for(unsigned j = 0; j < wind_count; j++) {
-      //vec2 v = parametric_curve_1(t, &pc1_cl[j]);
-      //vec2 v2 = parametric_curve_1(t + EPSILON, &pc1_cl[j]);
+      //Randomly remove some particles.
+      wind_remove_rand(winds[j], 512);
+      //Apply a bit of drag.
+      wind_scale_velocity(winds[j], drag);
+      
+      //Calculate the position and velocity of the emitter.
       vec2 v = parametricCurves[j](t, cl[j]);
       vec2 v2 = parametricCurves[j](t + EPSILON, cl[j]);
       vec2 dcdt = vScale((tStep / EPSILON), vMinus(v2, v));
       
-      vec2 noise = vScale((tStep * particleNoiseVelocity), symmetricUnitBall());
-      vec2 dvdt = vPlus(vScale(particleEmitterMomentumScalar, dcdt), noise);
-      particleNoiseVelocity = imageWidth / (32.0 * 1000.0);
+      for(unsigned k = 0; k < particlesPerFrame; k++) {
+        vec2 noise = vScale((tStep * particleNoiseVelocity), symmetricUnitBall());
+        vec2 dvdt = vPlus(vScale(particleEmitterMomentumScalar, dcdt), noise);
+        particleNoiseVelocity = imageWidth / (32.0 * 1000.0);
+        
+        wind_append(winds[j], v.x, v.y, dvdt.x, dvdt.y, uniformFloat(1, 2));
+      }
       
-      wind_remove_rand(winds[j], 512);
-      
-      
-      wind_scale_velocity(winds[j], drag);
-      wind_append(winds[j], v.x, v.y, dvdt.x, dvdt.y, uniformFloat(1, 2));
-      
+      //Update each particle.
       wind_update_bound(winds[j], 1.0, sumWeightedPotential, &pcl, -imageWidth / 2.0, -imageWidth / 2.0, 3.0 * imageWidth / 2, 3.0 * imageWidth / 2);
       //wind_update(winds[j], 0.5, sumWeightedPotential, &pcl);
 
       //Draw the wind.
-      //wind_draw(winds[j], img, windColors[j * 3 + 0], windColors[j * 3 + 1], windColors[j * 3 + 2], a, 0, 0, 1);
       wind_draw_roffset(winds[j], img, windColors[j * 3 + 0], windColors[j * 3 + 1], windColors[j * 3 + 2], wAlpha, 0, 0, 1, particlesToDraw, maxSpread);
       
       particleCount += winds[j]->particles;

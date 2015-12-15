@@ -9,11 +9,8 @@ float distanceSquaredPotential(float x, float y, void* cl) {
   float dy = y - ocl->cy;
   
   float distanceSquared = dx * dx + dy * dy;
-  if(distanceSquared < ocl->minDistanceSquared) {
-    distanceSquared = ocl->minDistanceSquared;
-  }
   
-  return ocl->strength / distanceSquared;
+  return ocl->strength / (distanceSquared + ocl->denominatorSummand);
 }
 
 float noiseSumPotential(float x, float y, void* cl) {

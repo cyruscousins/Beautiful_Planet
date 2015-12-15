@@ -6,7 +6,7 @@
 typedef struct centered_cl {
   float cx, cy;
   float strength;
-  float minDistanceSquared;
+  float denominatorSummand;
 } centered_cl;
 
 float distanceSquaredPotential(float x, float y, void* cl);

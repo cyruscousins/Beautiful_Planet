@@ -3,8 +3,10 @@
 
 set -e
 
-#./test 8 w=500 f=150
-./test 8 w=1000 f=1000
+rm test_video/*.ppm
+
+./test 8 w=500 f=300
+#./test 8 w=1000 f=1000
 
 cd test_video
 
@@ -21,3 +23,6 @@ rm -f mp4/video.mp4
 avconv -f image2 -r 22 -i ./%05d.ppm -c:v libx264 -s 1000x1000 -aspect 1:1 mp4/video.mp4
 
 cd -
+
+vlc test_video/mp4/video.mp4 &
+

@@ -3,18 +3,15 @@
 
 set -e
 
-rm -f test_video_8/*.ppm
+rm -f test_video_9/*.ppm
 
-./test 8 w=500 f=300
-#./test 8 w=1000 f=1000
+#./test 9 w=500 f=10
+#./test 9 w=500 f=200
+./test 9 w=1000 f=200
 
-cd test_video_8
+cd test_video_9
 
-mkdir -p png
 mkdir -p mp4
-
-#for i in *.ppm ; do convert "$i" "png/${i%.*}.png" & ; done 
-#wait
 
 #TODO -pix_fmt, want more pixels!
 rm -f mp4/video.mp4
@@ -24,5 +21,5 @@ avconv -f image2 -r 22 -i ./%05d.ppm -c:v libx264 -s 1000x1000 -aspect 1:1 mp4/v
 
 cd -
 
-vlc test_video_8/mp4/video.mp4 &
+vlc test_video_9/mp4/video.mp4 &
 

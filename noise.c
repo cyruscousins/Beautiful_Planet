@@ -33,7 +33,9 @@ float uniformFloat(float f0, float f1) {
   return rfloat() * (f1 - f0) + f0;
 }
 
-
+float uniformFloatS(float f) {
+  return uniformFloat(-f, f);
+}
 
 float* noise_2d_value(noise* n, unsigned x, unsigned y) {
   x = x % n->count;

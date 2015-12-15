@@ -232,7 +232,7 @@ weighted_sum_pcl* randomize_weighted_sum(float x0, float y0, float scale, unsign
   for(unsigned i = 1; i < count; i++) {
     unsigned type = uniformInt(0, 4);
     
-    w->weights[i] = uniformFloat(EPSILON, 2);
+    w->weights[i] = uniformFloat(1.0 / 2.0, 2);
     w->timeFactors[i] = uniformFloat(1.0 / 2.0, 2);
     w->timeSummands[i] = uniformFloat(0, TAU);
     
@@ -274,5 +274,128 @@ void free_weighted_sum(weighted_sum_pcl* w) {
   free(w->f);
   free(w->timeFactors);
   free(w->timeSummands);
+}
+
+
+//Set up the function tables
+
+typedef vec2 (*wsps_perturb_f)(void* cl, float amt);
+typedef vec2 (*wsps_randomize_f)(void* cl, float x0, float y0, float scale);
+
+pc2d_f wsps_f_table[ws_count] = {
+  parametric_curve_1,
+  parametric_curve_2,
+  hypocycloid,
+  epicycloid,
+};
+
+wsps_perturb_f wsps_perturb_table[ws_count] = {
+  NULL, NULL, NULL, NULL //TODO
+};
+
+unsigned wsps_cl_sizes[ws_count] = {
+  sizeof(ccl_1), sizeof(ccl_2), sizeof(cycloid), sizeof(cycloid)
+};
+
+wsps_randomize_f wsps_randomize_table[ws_count] = {
+  //NULL, NULL, NULL, NULL //TODO
+  (wsps_randomize_f) randomize_ccl_1, (wsps_randomize_f) randomize_ccl_2, (wsps_randomize_f) randomize_hypocycloid, (wsps_randomize_f) randomize_epicycloid
+};
+
+vec2 parametric_curve_weighted_static_sum(float t, void* cl) {
+  weighted_sum_pcl_static* pcl = cl;
+  vec2 result = {0, 0};
+  for(unsigned i = 0; i < pcl->count; i++) {
+    assert(pcl->types[i] < ws_count);
+    float tt = t * pcl->timeFactors[i] + pcl->timeSummands[i];
+    vec2 vv = wsps_f_table[(unsigned)pcl->types[i]](tt, pcl->cl[i]);
+    result = vPlus(result, vScale(pcl->weights[i], vv));
+  }
+  
+  vec2 offset = {pcl->x0, pcl->y0};
+  
+  return vPlus(vRotate(result, pcl->theta), offset);
+}
+void perturb_weighted_static_sum(weighted_sum_pcl_static* w, float amt) {
+  //Perturb rotation and position
+  w->x0 += uniformFloatS(amt);
+  w->y0 += uniformFloatS(amt);
+  w->theta += uniformFloatS(amt / 4.0);
+
+  for(unsigned i = 0; i < w->count; i++) {
+    //Perturb weights
+    float perturbationAmt = uniformFloat(1.0 - amt, 1.0);
+    if(uniformInt(0, 2)) {
+      perturbationAmt = 1.0 / perturbationAmt;
+    }
+    w->weights[i] *= perturbationAmt;
+    
+    w->timeSummands[i] += uniformFloatS(amt);
+    //Perturb curves
+    switch(w->types[i]) {
+      case ws_c1:
+        perturbationAmt = uniformFloat(1.0 - amt, 1.0);
+        if(uniformInt(0, 2)) {
+          perturbationAmt = 1.0 / perturbationAmt;
+        }
+        ((ccl_1*)w->cl[i])->amplitude *= perturbationAmt;
+        perturbationAmt = uniformFloat(1.0 - amt, 1.0);
+        if(uniformInt(0, 2)) {
+          perturbationAmt = 1.0 / perturbationAmt;
+        }
+        ((ccl_1*)w->cl[i])->base *= perturbationAmt;
+        break;
+      case ws_c2:
+        perturbationAmt = uniformFloat(1.0 - amt, 1.0);
+        if(uniformInt(0, 2)) {
+          perturbationAmt = 1.0 / perturbationAmt;
+        }
+        //Change a d or an f (multiplicatively).
+        unsigned valToChange = uniformInt(0, 8);
+        ((ccl_2*)w->cl[i])->d[valToChange] *= perturbationAmt;
+        //Change a p (additivitively).
+        valToChange = uniformInt(0, 4);
+        ((ccl_2*)w->cl[i])->p[valToChange] += uniformFloatS(amt);
+        break;
+      case ws_hypocycloid:
+      case ws_epicycloid:
+        perturbationAmt = uniformFloat(1.0 - amt, 1.0);
+        if(uniformInt(0, 2)) {
+          perturbationAmt = 1.0 / perturbationAmt;
+        }
+        ((cycloid*)w->cl[i])->rb *= perturbationAmt;
+        ((cycloid*)w->cl[i])->r *= perturbationAmt;
+        ((cycloid*)w->cl[i])->a += uniformFloatS(amt);
+        break;
+    }
+  }
+}
+
+weighted_sum_pcl_static* randomize_weighted_static_sum(float x0, float y0, float scale, unsigned maxComponents) {
+  assert(maxComponents > 0);
+  weighted_sum_pcl_static* pcl = malloc(sizeof(weighted_sum_pcl_static));
+  unsigned count = uniformInt(1, maxComponents + 1);
+
+  pcl->x0 = x0;
+  pcl->y0 = y0;
+  pcl->count = count;
+  pcl->theta = uniformFloat(0, TAU);
+  
+  pcl->types = malloc(sizeof(char) * count);
+  pcl->cl = malloc(sizeof(void*) * count);
+  pcl->weights = malloc(sizeof(float) * count * 3);
+  pcl->timeFactors = pcl->weights + count;
+  pcl->timeSummands = pcl->timeFactors + count;
+  
+  for(unsigned i = 0; i < count; i++) {
+    unsigned type = uniformInt(0, ws_count);
+    pcl->types[i] = (char) type;
+    pcl->cl[i] = malloc(wsps_cl_sizes[type]);
+    wsps_randomize_table[(unsigned)pcl->types[i]](pcl->cl[i], 0, 0, scale / count);
+    pcl->weights[i] = uniformFloat(1.0 / 2.0, 2);
+    pcl->timeFactors[i] = uniformFloat(1.0 / 2.0, 2);
+    pcl->timeSummands[i] = (type == ws_c2) ? 0 : uniformFloat(0, TAU);
+  }
+  return pcl;
 }
 

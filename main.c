@@ -690,7 +690,7 @@ void test8() {
     
     //Render
     char path[128];
-    sprintf(path, "test_video/%05u.ppm", i);
+    sprintf(path, "test_video_8/%05u.ppm", i);
     FILE* f = fopen(path, "wb");
     image_write_ppm(img, f, 255);
     fclose(f);
@@ -703,9 +703,81 @@ void test8() {
   noise_sum_free(ncl);
 }
 
-#define TESTCOUNT 8
+//Curve perturbation animation test.
+void test9() {
+  image* img = image_new(imageWidth, imageWidth);
+  fill_image(img, 0, 0, 0);
+  
+  //Parameterization:
+  
+  float totalTime = 400;
+    
+  unsigned tracer_count = 8; //Number of traced curves.
+  float tracerColorChange = 1.0 / 16.0;
+  float tracerColorReduction = 0.99;
+  
+  //////////
+  //Tracers:
+  
+  weighted_sum_pcl_static* curve = randomize_weighted_static_sum(imageWidth / 2, imageWidth / 2, imageWidth / 2, 16);
+  color color;
+  randomize_color(&color, -0.125, 0.5, 1);
+  
+  /////////////////////
+  //Run the Simulation:
+      
+  //Move along the curves, adding to the wind.
+  
+  float tStep = totalTime / frames;
+  
+  for(unsigned i = 0; i < frames; i++) {
+    float t = tStep * i;
+    //if(i % 10 == 0) {
+      printf("Frame %u / %u\r", i, frames);
+      fflush(stdout);
+    //}
+    
+    //Blur and darken the existing image.
+    
+    if(i % 2 == 0) {
+      float m = 1.0 - 512.0 / imageWidth;
+      if(m < 0) m = 0;
+      //Darken one color channel at a time.
+      image_multiply_channel(img, (i / 2) % 3, m);
+      //fill_image_a(img, 0, 0, 0, 32.0 / imageWidth);
+    } else {
+      image_blur_fast_inplace(img, i / 2);
+    }
+    
+    //Render the curve
+    float renderSpacing = (1.0 / imageWidth) * (10.0);
+    
+    //draw_parametric_curve_uniform_time(img, draw_point_additive, parametric_curve_weighted_static_sum, 0, uniformFloat(0, 200), renderSpacing * (1 + uniformFloat(0, 1)), &color, curve);
+    draw_parametric_curve_uniform_space(img, draw_point_additive, parametric_curve_weighted_static_sum, 0, t, 0.01, 1.5, 0.9, &color, curve);
+    
+    //Perturb the curve  
+    perturb_weighted_static_sum(curve, 0.005);
+    
+    //Perturb the colors.
+    for(unsigned c = 0; c < C; c++) {
+      color.c[c] += uniformFloat(-tracerColorChange, tracerColorChange);
+      color.c[c] *= uniformFloat(tracerColorReduction, 1);
+    }
+    
+    //Write to disk
+    char path[128];
+    sprintf(path, "test_video_9/%05u.ppm", i);
+    FILE* f = fopen(path, "wb");
+    image_write_ppm(img, f, 255);
+    fclose(f);
+  }
+  
+  image_free(img);
+}
+
+#define TESTCOUNT 9
 void (*testFunctions[TESTCOUNT])() = {
-  test1, test2, test3, test4, test5, test6, test7, test8
+  test1, test2, test3, test4, test5, test6, test7, test8, test9
 };
 
 #define bool char
@@ -733,6 +805,9 @@ int main(int argc, char** argsv) {
     } else if(sscanf(argsv[i], "f=%d", &val)) {
       frames = val;
       printf("Setting frames to %u.\n", frames);
+    } else if(sscanf(argsv[i], "r=%d", &val)) {
+      seed_lcg((uint32_t)val);
+      printf("Seeding random number generator with %u.\n", val);
     } else if(sscanf(argsv[i], "%d", &val)) {
       if(val == -1) {
         for(unsigned i = 0; i < TESTCOUNT; i++) {

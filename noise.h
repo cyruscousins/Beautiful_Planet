@@ -10,6 +10,7 @@ unsigned rand_lcg_global();
 float rfloat();
 int uniformInt(int x0, int x1);
 float uniformFloat(float f0, float f1);
+float uniformFloatS(float f);
 
 typedef struct noise {
   unsigned count;

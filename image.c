@@ -30,20 +30,42 @@ float* image_pixel(image* i, unsigned x, unsigned y, unsigned c) {
 }
 
 uint8_t image_pixel_8bit(image* i, unsigned x, unsigned y, unsigned c, uint8_t cmax) {
-  float f = clamp(*image_pixel(i, x, y, c), 0, 1 - IMG_EPSILON);
+  float f = clampf(*image_pixel(i, x, y, c), 0, 1 - IMG_EPSILON);
   return (uint8_t) (f * (((float)cmax) + 1)); 
 }
 
 uint16_t image_pixel_16bit(image* i, unsigned x, unsigned y, unsigned c, uint16_t cmax) {
-  float f = clamp(*image_pixel(i, x, y, c), 0, 1 - IMG_EPSILON);
+  float f = clampf(*image_pixel(i, x, y, c), 0, 1 - IMG_EPSILON);
   return (uint16_t) (f * (((float)cmax) + 1)); 
 }
 
+uint8_t image_pixel_8bit_full(image* i, unsigned x, unsigned y, unsigned c) {
+  return clampf8(*image_pixel(i, x, y, c)); 
+}
+
+uint16_t image_pixel_16bit_full(image* i, unsigned x, unsigned y, unsigned c) {
+  return clampf16(*image_pixel(i, x, y, c)); 
+}
 
 //TODO nonlinear gamma correction.
 void image_write_ppm(image* i, FILE* f, uint16_t depth) {
   fprintf(f, "P6\n%u %u %u\n", i->width, i->height, depth);
-  if(depth < 256) {
+  if(depth == 255) {
+    //Fast path for 8 bit color.
+    char* data = malloc(3 * i->height * i->width);
+    for(unsigned y = 0; y < i->height; y++) {
+      for(unsigned x = 0; x < i->width; x++) {
+        uint8_t r = image_pixel_8bit_full(i, x, y, R);
+        uint8_t g = image_pixel_8bit_full(i, x, y, G);
+        uint8_t b = image_pixel_8bit_full(i, x, y, B);
+        data[3 * (y * i->width + x) + 0] = r;
+        data[3 * (y * i->width + x) + 1] = g;
+        data[3 * (y * i->width + x) + 2] = b;
+      }
+    }
+    fwrite(data, 3 * i->height * i->width, 1, f);
+    free(data);
+  } else if(depth < 256) {
     //Fast path for low bitrate images.
     char* data = malloc(3 * i->height * i->width);
     for(unsigned y = 0; y < i->height; y++) {

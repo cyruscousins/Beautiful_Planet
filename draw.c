@@ -109,6 +109,25 @@ void draw_point_additive(image* img, unsigned x, unsigned y, void* cl) {
   }
 }
 
+void draw_random(image* img, unsigned x, unsigned y, void* cl) {
+  random_cl* rcl = cl;
+  color* col = rcl->col;
+  for(unsigned i = 0; i < rcl->count; i++) {
+    int dx = uniformInt(-((int)rcl->range), rcl->range + 1);
+    int dy = uniformInt(-((int)rcl->range), rcl->range + 1);
+    draw_point(img, x + dx, y + dy, col);
+  }
+}
+void draw_random_additive(image* img, unsigned x, unsigned y, void* cl) {
+  random_cl* rcl = cl;
+  color* col = rcl->col;
+  for(unsigned i = 0; i < rcl->count; i++) {
+    int dx = uniformInt(-((int)rcl->range), rcl->range + 1);
+    int dy = uniformInt(-((int)rcl->range), rcl->range + 1);
+    draw_point_additive(img, x + dx, y + dy, col);
+  }
+}
+
 void draw_circle(image* img, unsigned x, unsigned y, void* cl) {
   color* col = cl;
   float r = ((circle_cl*)cl)->r;

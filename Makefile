@@ -5,8 +5,8 @@ OPTFLAGS=-Ofast -ffast-math -DNDEBUG -march=native -g#-m32 #Causes a compiler is
 CFLAGS=$(DBGFLAGS) -std=c11
 #CFLAGS=$(OPTFLAGS) -std=c11 -flto
 
-LFLAGS=$(OPTFLAGS) -flto
-LIB=-lm
+LFLAGS=$(OPTFLAGS) -fuse-linker-plugin -flto -fwhole-program
+LIB=-lm -lX11
 
 all: test
 
@@ -16,7 +16,7 @@ wind.o: wind.h wind.c image.h
 image.o: image.h image.c
 	gcc $(CFLAGS) image.c -c
 
-main.o: main.c
+main.o: main.c image.h noise.h art.h
 	gcc $(CFLAGS) main.c -c
 
 draw.o: draw.c draw.h image.h
@@ -37,8 +37,14 @@ convolution.o: convolution.c convolution.h
 filters.o: filters.c filters.h image.h
 	gcc $(CFLAGS) filters.c -c
 
-test: wind.o image.o main.o draw.o potentials.o noise.o parametric.o convolution.o filters.o
-	gcc $(LFLAGS) wind.o image.o main.o draw.o potentials.o noise.o parametric.o convolution.o filters.o $(LIB) -o test
+art.o: art.c art.h image.h
+	gcc $(CFLAGS) art.c -c
+
+x11.o: x11.c x11.h image.h
+	gcc $(CFLAGS) x11.c -c
+
+test: wind.o image.o main.o draw.o potentials.o noise.o parametric.o convolution.o filters.o art.o x11.o
+	gcc $(LFLAGS) wind.o image.o main.o draw.o potentials.o noise.o parametric.o convolution.o filters.o art.o x11.o $(LFLAGS) $(LIB) -o test
 
 clean:
 	rm *.o *.gch

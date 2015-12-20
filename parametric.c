@@ -324,7 +324,7 @@ void perturb_weighted_static_sum(weighted_sum_pcl_static* w, float amt) {
 
   for(unsigned i = 0; i < w->count; i++) {
     //Perturb weights
-    float perturbationAmt = uniformFloat(1.0 - amt, 1.0);
+    float perturbationAmt = uniformFloat(1.0 - amt * 4, 1.0);
     if(uniformInt(0, 2)) {
       perturbationAmt = 1.0 / perturbationAmt;
     }
@@ -392,7 +392,7 @@ weighted_sum_pcl_static* randomize_weighted_static_sum(float x0, float y0, float
     pcl->types[i] = (char) type;
     pcl->cl[i] = malloc(wsps_cl_sizes[type]);
     wsps_randomize_table[(unsigned)pcl->types[i]](pcl->cl[i], 0, 0, scale / count);
-    pcl->weights[i] = uniformFloat(1.0 / 2.0, 2);
+    pcl->weights[i] = 1.0 / count;
     pcl->timeFactors[i] = uniformFloat(1.0 / 2.0, 2);
     pcl->timeSummands[i] = (type == ws_c2) ? 0 : uniformFloat(0, TAU);
   }

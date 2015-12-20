@@ -15,6 +15,11 @@ typedef struct circle_cl {
   float r;
 } circle_cl;
 
+typedef struct random_cl {
+  unsigned count, range;
+  color* col;
+} random_cl;
+
 void randomize_color(color* c, float cLow, float cHigh, float alpha);
 
 //Drawing rectangles
@@ -35,6 +40,9 @@ float noisePaint(unsigned x, unsigned y, void* cl);
 void draw_point_additive(image* img, unsigned x, unsigned y, void* cl); //closure is a color with no alpha channel.
 void draw_point(image* img, unsigned x, unsigned y, void* cl); //closure is a color
 void draw_circle(image* img, unsigned x, unsigned y, void* cl); //closure is a circle_cl
+
+void draw_random(image* img, unsigned x, unsigned y, void* cl); //closure is a random_cl
+void draw_random_additive(image* img, unsigned x, unsigned y, void* cl); //Closure is a random_cl
 
 #endif
 

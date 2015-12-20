@@ -291,9 +291,11 @@ void gravity(image_processor p, unsigned imageWidth, unsigned imageHeight, unsig
           tracer_cl[j].p[i] += uniformFloat(-pd, pd);
         }
         
-        random_cl rcl = {3, 1, &tracer_color[j]};
         //draw_parametric_curve_uniform_time(img, draw_point_additive, parametric_curve_2, 0, uniformFloat(0, 200), renderSpacing * (1 + uniformFloat(0, 1)), &tracer_color[j], &tracer_cl[j]);
+        
+        //random_cl rcl = {3, 1, &tracer_color[j]};
         //draw_parametric_curve_uniform_space(img, draw_random_additive, parametric_curve_2, 0, uniformFloat(0, 200), 0.01, 2, 0.9, &rcl, &tracer_cl[j]);
+        
         draw_parametric_curve_uniform_space(img, draw_point_additive, parametric_curve_2, 0, uniformFloat(0, 200), 0.01, 1, 0.9, &tracer_color[j], &tracer_cl[j]);
       }
     }
@@ -372,12 +374,11 @@ void curves(image_processor p, unsigned imageWidth, unsigned imageHeight, unsign
   
   float totalTime = 800;
   
-  unsigned tracer_count = 8; //Number of traced curves.
   float tracerColorChange = 1.0 / 32.0;
   float tracerColorReduction = 0.95;
   
-  float tracerColorLow = 0.05;
-  float tracerColorHigh = 0.25;
+  float tracerColorLow = 0.01;
+  float tracerColorHigh = 0.125;
   
   //////////
   //Tracers:
@@ -413,10 +414,10 @@ void curves(image_processor p, unsigned imageWidth, unsigned imageHeight, unsign
     }
     
     //Render the curve
-    float renderSpacing = (1.0 / imageWidth) * (10.0);
     
+    //float renderSpacing = (1.0 / imageWidth) * (10.0);
     //draw_parametric_curve_uniform_time(img, draw_point_additive, parametric_curve_weighted_static_sum, 0, uniformFloat(0, 200), renderSpacing * (1 + uniformFloat(0, 1)), &color, curve);
-    draw_parametric_curve_uniform_space(img, draw_point_additive, parametric_curve_weighted_static_sum, 0, t, 0.005, 1.0, 0.9, &color, curve);
+    draw_parametric_curve_uniform_space(img, draw_point_additive, parametric_curve_weighted_static_sum, 0, t, 0.005, 1.0 + t / totalTime, 0.9, &color, curve);
     
     //Perturb the curve  
     perturb_weighted_static_sum(curve, 0.01);
@@ -426,6 +427,9 @@ void curves(image_processor p, unsigned imageWidth, unsigned imageHeight, unsign
       float w0 = 1.0 / curve->count; //Minimum target weight
       if(curve->weights[i] < w0) {
         curve->weights[i] *= 1.0 + (uniformFloat(0, w0 / curve->weights[i] - 1.0));
+      }
+      else if(curve->weights[i] < w0 * 2 / 3) {
+        curve->weights[i] += uniformFloat(0, 1.0 / 256.0);
       }
     }
     
@@ -448,4 +452,8 @@ void curves(image_processor p, unsigned imageWidth, unsigned imageHeight, unsign
   }
   
   image_free(img);
+}
+
+void dust(image_processor p, unsigned imageWidth, unsigned imageHeight, unsigned frames) {
+
 }

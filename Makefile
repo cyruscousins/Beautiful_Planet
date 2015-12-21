@@ -8,6 +8,11 @@ CFLAGS=$(DBGFLAGS) -std=c11
 LFLAGS=$(OPTFLAGS) -fuse-linker-plugin -flto -fwhole-program
 LIB=-lm -lX11
 
+UNAME := $(shell uname -s)
+ifeq ($(UNAME),Darwin)
+	LFLAGS += -L/usr/X11/lib
+endif
+
 all: test
 
 wind.o: wind.h wind.c image.h
@@ -47,4 +52,4 @@ test: wind.o image.o main.o draw.o potentials.o noise.o parametric.o convolution
 	gcc $(LFLAGS) wind.o image.o main.o draw.o potentials.o noise.o parametric.o convolution.o filters.o art.o x11.o $(LFLAGS) $(LIB) -o test
 
 clean:
-	rm *.o *.gch
+	rm -f *.o *.gch

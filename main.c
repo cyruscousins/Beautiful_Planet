@@ -2,6 +2,7 @@
 #include <stdlib.h>
 #include <math.h>
 #include <string.h>
+#include <unistd.h>
 
 #include "wind.h"
 #include "image.h"
@@ -17,7 +18,6 @@
 #define PI 3.14159627
 #define TAU (2*PI)
 
-//TODO
 //Some globals respected by (most of) the tests.
 int imageWidth = 1000;
 unsigned frames = 100;
@@ -27,6 +27,9 @@ unsigned nsSize = 16;
 unsigned nsDepth = 4;
 
 char fileBuffer[256];
+
+image_processor imageProcessor;
+
 
 //Create a tiny test ppm
 void test1() {
@@ -368,9 +371,22 @@ void test7() {
   noise_sum_free(ncl);
 }
 
+//Essentially an animated version of test 7.
+void test8() {
+  gravity(imageProcessor, imageWidth, imageWidth, frames);
+}
 
-char* imageName;
-void imageToFile(image* i) {
+//Curve perturbation animation test.
+void test9() {
+  curves(imageProcessor, imageWidth, imageWidth, frames);
+}
+
+
+//Output control:
+
+
+char* imageName = "";
+void imageToFile(image* i, void* cl) {
   char path[128];
   sprintf(path, "%s.ppm", imageName);
   FILE* f = fopen(path, "wb");
@@ -385,6 +401,7 @@ void frameToFile(image* i, void* cl) {
   FILE* f = fopen(path, "wb");
   image_write_ppm(i, f, 255);
   fclose(f);
+  imageIndex++;
 }
 
 #include <time.h>
@@ -406,19 +423,6 @@ void imageToScreen(image* i, void* cl) {
   x_window_display_image(i);
 }
 
-image_processor imageProcessor = imageToScreen;
-
-//Essentially an animated version of test 7.
-void test8() {
-  gravity(imageProcessor, imageWidth, imageWidth, frames);
-}
-
-//Curve perturbation animation test.
-void test9() {
-  curves(imageProcessor, imageWidth, imageWidth, frames);
-}
-
-
 #define TESTCOUNT 9
 void (*testFunctions[TESTCOUNT])() = {
   test1, test2, test3, test4, test5, test6, test7, test8, test9
@@ -431,7 +435,7 @@ void (*testFunctions[TESTCOUNT])() = {
 int main(int argc, char** argsv) {
   bool runTest[TESTCOUNT];
   
-  
+  imageProcessor = frameToFile;
   
   for(unsigned i = 0; i < TESTCOUNT; i++) {
     runTest[i] = FALSE;
@@ -439,7 +443,9 @@ int main(int argc, char** argsv) {
   
   for(unsigned i = 1; i < argc; i++) {
     int val;
-    if(sscanf(argsv[i], "w=%d", &val)) {
+    if(!strcmp(argsv[i], "x")) {
+      imageProcessor = imageToScreen;
+    } else if(sscanf(argsv[i], "w=%d", &val)) {
       imageWidth = val;
       printf("Setting width of test images to %u.\n", imageWidth);
     } else if(sscanf(argsv[i], "s=%d", &val)) {
@@ -465,14 +471,18 @@ int main(int argc, char** argsv) {
       } else {
         runTest[val - 1] = TRUE;
       }
+    } else if(!strcmp(argsv[i], "-o")){
+      imageName = argsv[++i]; //Note: not checking bounds here.
     } else {
       fprintf(stderr, "Error: unrecognized option \"%s\".  Terminating.\n", argsv[i]);
     }
   }
   
-  x_window_init();
-  x_window_create(imageWidth, imageWidth);
-
+  if(imageProcessor == imageToScreen) {
+    x_window_init();
+    x_window_create(imageWidth, imageWidth);
+  }
+  
   for(unsigned i = 0; i < TESTCOUNT; i++) {
     if(runTest[i]) {
       printf("Running test %u.\n", i + 1);
@@ -480,6 +490,8 @@ int main(int argc, char** argsv) {
     }
   }
   
-  x_window_cleanup();
+  if(imageProcessor == imageToScreen) {
+    x_window_cleanup();
+  }
 }
 

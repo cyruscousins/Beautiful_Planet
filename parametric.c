@@ -3,65 +3,6 @@
 
 #include <math.h>
 
-#include <stdio.h>
-
-#define PI 3.14159627
-#define TAU (2*PI)
-#define EPSILON 0.0000001
-
-//Generic functions
-
-float vL2Sqr(vec2 a) {
-  return a.x * a.x + a.y * a.y;
-}
-float vL1(vec2 a) {
-  return fabs(a.x) + fabs(a.y);
-}
-
-vec2 vPlus(vec2 a, vec2 b) {
-  vec2 result = { a.x + b.x, a.y + b.y };
-  return result;
-}
-vec2 vMinus(vec2 a, vec2 b) {
-  vec2 result = { a.x - b.x, a.y - b.y };
-  return result;
-}
-vec2 vScale(float s, vec2 a) {
-  vec2 result = { a.x * s, a.y * s };
-  return result;
-}
-float vDot(vec2 a, vec2 b) {
-  return a.x * b.x + a.y * b.y;
-}
-
-vec2 vRotate(vec2 a, float theta) {
-  float cost = cosf(theta);
-  float sint = sinf(theta);
-  vec2 result = {a.x * cost - a.y * sint, a.x * sint + a.y * cost};
-  return result;
-}
-
-float vDSqr(vec2 a, vec2 b) {
-  return vL2Sqr(vMinus(a, b));
-}
-float vDistance(vec2 a, vec2 b) {
-  return sqrtf(vL2Sqr(vMinus(a, b)));
-}
-
-
-vec2 uniformUnitCirc() {
-  float theta = uniformFloat(0, TAU);
-  vec2 result = { cosf(theta), sinf(theta) };
-  return result;
-}
-vec2 symmetricUnitBall() {
-  return vScale(rfloat(), uniformUnitCirc());
-}
-vec2 symmetricBall(float radius) {
-  return vScale(rfloat() * radius, uniformUnitCirc());
-}
-
-
 vec2 ddt(vec2 (*f)(float t, void* cl), float t, void* cl) {
   vec2 v0 = f(t, cl);
   vec2 v1 = f(t + EPSILON, cl);
@@ -106,10 +47,6 @@ void draw_parametric_curve_uniform_space(image* img, void (*draw)(image*, unsign
   //last = f(t1, cl2);
   //draw(img, (unsigned)last.x, (unsigned) last.y, cl1);
 }
-
-//TODO the next thing to do is to test this function and parametric curve 2.
-//Then work on using the derivatives of these curves as force vectors.
-
 
 vec2 parametric_curve_1(float t, void* cl) {
   ccl_1* ccl = cl;

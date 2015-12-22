@@ -10,8 +10,8 @@ typedef struct centered_cl {
 } centered_cl;
 
 float distanceSquaredPotential(float x, float y, void* cl);
-
 float noiseSumPotential(float x, float y, void* cl);
+float gradientPotential(float x, float y, void* cl);
 
 typedef struct poly_cl {
   float(**f)(float, float, void*);

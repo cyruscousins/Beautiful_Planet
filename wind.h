@@ -20,8 +20,6 @@ typedef struct wind {
 #define MASS_IDX 4
 #define DATA_SIZE 5
 
-#define EPSILON 0.001
-
 wind* wind_new(unsigned particleCount);
 void wind_free(wind* w);
 

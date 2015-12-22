@@ -2,6 +2,7 @@
 #include <stdlib.h>
 #include <math.h>
 #include <string.h>
+#define _BSD_SOURCE
 #include <unistd.h>
 
 #include "wind.h"
@@ -14,9 +15,6 @@
 
 #include "art.h"
 #include "x11.h"
-
-#define PI 3.14159627
-#define TAU (2*PI)
 
 //Some globals respected by (most of) the tests.
 int imageWidth = 1000;
@@ -373,13 +371,19 @@ void test7() {
 
 //Essentially an animated version of test 7.
 void test8() {
-  gravity(imageProcessor, imageWidth, imageWidth, frames);
+  gravity(imageProcessor, imageWidth, imageWidth, frames, nsSize, nsDepth);
 }
 
 //Curve perturbation animation test.
 void test9() {
   curves(imageProcessor, imageWidth, imageWidth, frames);
 }
+
+//Black dust on a white background.
+void test10() {
+  dust(imageProcessor, imageWidth, imageWidth, frames, nsSize, nsDepth);
+}
+
 
 
 //Output control:
@@ -423,14 +427,10 @@ void imageToScreen(image* i, void* cl) {
   x_window_display_image(i);
 }
 
-#define TESTCOUNT 9
+#define TESTCOUNT 10
 void (*testFunctions[TESTCOUNT])() = {
-  test1, test2, test3, test4, test5, test6, test7, test8, test9
+  test1, test2, test3, test4, test5, test6, test7, test8, test9, test10
 };
-
-#define bool char
-#define TRUE 1
-#define FALSE 0
 
 int main(int argc, char** argsv) {
   bool runTest[TESTCOUNT];
@@ -438,7 +438,7 @@ int main(int argc, char** argsv) {
   imageProcessor = frameToFile;
   
   for(unsigned i = 0; i < TESTCOUNT; i++) {
-    runTest[i] = FALSE;
+    runTest[i] = false;
   }
   
   for(unsigned i = 1; i < argc; i++) {
@@ -463,13 +463,13 @@ int main(int argc, char** argsv) {
     } else if(sscanf(argsv[i], "%d", &val)) {
       if(val == -1) {
         for(unsigned i = 0; i < TESTCOUNT; i++) {
-          runTest[i] = TRUE;
+          runTest[i] = true;
         }
       } else if(val <= 0 || val > TESTCOUNT) {
         fprintf(stderr, "Can't run test %d: max is %d.  Terminating.\n", val, TESTCOUNT);
         return 1;
       } else {
-        runTest[val - 1] = TRUE;
+        runTest[val - 1] = true;
       }
     } else if(!strcmp(argsv[i], "-o")){
       imageName = argsv[++i]; //Note: not checking bounds here.

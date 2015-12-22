@@ -1,5 +1,6 @@
 
 #include "image.h"
+#include "global.h"
 
 image* image_new(unsigned width, unsigned height) {
   image* i = malloc(sizeof(image) + width * height * C * sizeof(float));

@@ -5,8 +5,7 @@
 #include "wind.h"
 #include "noise.h"
 #include "parametric.h"
-
-typedef char bool;
+#include "global.h"
 
 wind* wind_new(unsigned particleCount) {
   wind* w = malloc(sizeof(wind) + particleCount * DATA_SIZE * sizeof(float));
@@ -42,14 +41,22 @@ void wind_update_bound(wind* w, float t, float (*pressure)(float, float, void*),
     }
     
     float p0 = pressure(wind_x(w)[i], wind_y(w)[i], cl);
-    float px = pressure(wind_x(w)[i] + EPSILON, wind_y(w)[i], cl);
-    float py = pressure(wind_x(w)[i], wind_y(w)[i] + EPSILON, cl);
+    float px = pressure(wind_x(w)[i] + DEPSILON, wind_y(w)[i], cl);
+    float py = pressure(wind_x(w)[i], wind_y(w)[i] + DEPSILON, cl);
     
-    wind_dx(w)[i] += t * (px - p0) / (EPSILON * wind_mass(w)[i]);
-    wind_dy(w)[i] += t * (py - p0) / (EPSILON * wind_mass(w)[i]);
-
-    wind_x(w)[i] += t * wind_dx(w)[i];
-    wind_y(w)[i] += t * wind_dy(w)[i];
+    float d2xdt = t * (px - p0) / (DEPSILON * wind_mass(w)[i]);
+    float d2ydt = t * (py - p0) / (DEPSILON * wind_mass(w)[i]);
+    
+    //printf("(%f %f (d%f)) (%f %f %f) (%f %f)\n", wind_x(w)[i], wind_y(w)[i], DEPSILON, p0, px, py, d2xdt, d2ydt);
+    
+    wind_dx(w)[i] += d2xdt;
+    wind_dy(w)[i] += d2ydt;
+    
+    float dxdt = t * wind_dx(w)[i];
+    float dydt = t * wind_dy(w)[i];
+    
+    wind_x(w)[i] += t * dxdt;
+    wind_y(w)[i] += t * dydt;
   }
 }
 
@@ -60,7 +67,7 @@ void wind_scale_velocity(wind* w, float s) {
   }
 }
 
-//TODO may be good to replace a value if append fails.
+//TODO may be a better semantics to replace an existing value if append fails.
 void wind_append(wind* w, float x, float y, float dx, float dy, float mass) {
   if(w->particles < w->maxParticles) {
     wind_x(w)[w->particles] = x;
@@ -96,8 +103,6 @@ void wind_empty(wind* w) {
   w->particles = 0;
 }
 
-#define PI 3.14159627
-#define TAU (2*PI)
 void wind_randomize(wind* w, unsigned count, float x0, float y0, float x1, float y1, float vMax, float mMax) {
   wind_empty(w);
   for(unsigned i = 0; i < count; i++) {
@@ -111,16 +116,8 @@ void wind_randomize(wind* w, unsigned count, float x0, float y0, float x1, float
   }
 }
 
-static bool bounded(float f, float bottom, float top) {
-  return f >= bottom && f <= top;
-}
-
-static bool bounded01(float f) {
-  return bounded(f, 0, 1);
-}
 
 //Drawing
-
 void wind_draw(wind* w, image* img, float r, float g, float b, float a, float x0, float y0, float scale) {
   assert(bounded01(r) && bounded01(g) && bounded01(b) && bounded01(a));
   for(unsigned i = 0; i < w->particles; i++) {
@@ -161,7 +158,6 @@ void wind_draw_roffset(wind* w, image* img, float r, float g, float b, float a, 
     }
   }
 }
-
 
 void wind_print(wind* w, FILE* f) {
   fprintf(f, "{WIND %d / %d: (x, y, dx, dy, m)\n", w->particles, w->maxParticles);

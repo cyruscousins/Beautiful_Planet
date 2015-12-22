@@ -8,5 +8,4 @@ int x_window_create(unsigned image_width, unsigned image_height);
 int x_window_display_image(image* img);
 void x_window_cleanup();
 
-
 #endif

@@ -48,8 +48,11 @@ art.o: art.c art.h image.h
 x11.o: x11.c x11.h image.h
 	gcc $(CFLAGS) x11.c -c
 
-test: wind.o image.o main.o draw.o potentials.o noise.o parametric.o convolution.o filters.o art.o x11.o
-	gcc $(LFLAGS) wind.o image.o main.o draw.o potentials.o noise.o parametric.o convolution.o filters.o art.o x11.o $(LFLAGS) $(LIB) -o test
+global.o: global.c global.h
+	gcc $(CFLAGS) global.c -c
+
+test: wind.o image.o main.o draw.o potentials.o noise.o parametric.o convolution.o filters.o art.o x11.o global.o
+	gcc $(LFLAGS) wind.o image.o main.o draw.o potentials.o noise.o parametric.o convolution.o filters.o art.o x11.o global.o $(LFLAGS) $(LIB) -o test
 
 clean:
 	rm -f *.o *.gch

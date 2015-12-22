@@ -26,6 +26,11 @@ float sumPotential(float x, float y, void* cl) {
   return sum;
 }
 
+float gradientPotential(float x, float y, void* cl) {
+  vec2* v = cl;
+  return v->x * x + v->y * y;
+}
+
 float sumWeightedPotential(float x, float y, void* cl) {
   poly_weighted_cl* pcl = cl;
   float sum = 0;

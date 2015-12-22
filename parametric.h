@@ -2,27 +2,7 @@
 #define PARAMETRIC_H
 
 #include "image.h"
-
-///////////////////
-//Basic vector math
-
-typedef struct vec2 {
-  float x, y;
-} vec2;
-
-vec2 vPlus(vec2 a, vec2 b);
-vec2 vMinus(vec2 a, vec2 b);
-vec2 vScale(float s, vec2 a);
-float vDot(vec2 a, vec2 b);
-
-float vDSqr(vec2 a, vec2 b);
-float vDistance(vec2 a, vec2 b);
-
-vec2 vRotate(vec2 a, float theta);
-
-vec2 uniformUnitCirc();
-vec2 symmetricUnitBall();
-vec2 symmetricBall(float radius);
+#include "global.h"
 
 ///////////////////
 //Parametric Curves

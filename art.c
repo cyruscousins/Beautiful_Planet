@@ -1,10 +1,10 @@
-
 #include <stdlib.h>
 #include <stdio.h>
 #include <math.h>
 #include <string.h>
 
 #include "art.h"
+#include "global.h"
 
 #include "wind.h"
 #include "image.h"
@@ -14,15 +14,9 @@
 #include "parametric.h"
 #include "filters.h"
 
-#define PI 3.14159626
-#define TAU (2 * PI)
-
-static unsigned nsSize = 16;
-static unsigned nsDepth = 4;
-
 #define POTENTIAL_COUNT 2
 
-void gravity(image_processor p, unsigned imageWidth, unsigned imageHeight, unsigned frames) {
+void gravity(image_processor p, unsigned imageWidth, unsigned imageHeight, unsigned frames, unsigned nsSize, unsigned nsDepth) {
   image* img = image_new(imageWidth, imageWidth);
   fill_image(img, 0, 0, 0);
   
@@ -35,8 +29,8 @@ void gravity(image_processor p, unsigned imageWidth, unsigned imageHeight, unsig
   unsigned particlesToDraw = 2;
   float maxSpread = imageWidth / 500.0;
   
-  float particleNoiseVelocity = imageWidth / (32.0 * 1000.0);
-  float particleEmitterMomentumScalar = 0.25;
+  float particleNoiseVelocity = 1024.0 * imageWidth / (1000.0);
+  float particleEmitterMomentumScalar = 0.5;
   
   float totalTime = TAU;
   
@@ -107,7 +101,7 @@ void gravity(image_processor p, unsigned imageWidth, unsigned imageHeight, unsig
   noise_sum* ncl = initialize_noise_sum_2d(nsSize, nsDepth);
   noise_sum_scale_in(ncl, 1.0 / imageWidth);
 
-  centered_cl orbitcl = { imageWidth / 2.0, imageWidth / 2.0, imageWidth * imageWidth, (imageWidth / 16.0) * (imageWidth / 16.0) };
+  centered_cl orbitcl = { imageWidth / 2.0, imageWidth / 2.0, imageWidth * imageWidth, (imageWidth / 8.0) * (imageWidth / 8.0) };
   
   float(*potentialFunctions[POTENTIAL_COUNT])(float, float, void*) = {
     noiseSumPotential,
@@ -117,7 +111,7 @@ void gravity(image_processor p, unsigned imageWidth, unsigned imageHeight, unsig
   void* pcls[POTENTIAL_COUNT] = {ncl, &orbitcl};
   
   float weights[POTENTIAL_COUNT] = {
-    25, 1.25
+    80000000, 100000
   };
   
   poly_weighted_cl pcl = { potentialFunctions, pcls, weights, POTENTIAL_COUNT};
@@ -150,7 +144,7 @@ void gravity(image_processor p, unsigned imageWidth, unsigned imageHeight, unsig
   //Move along the curves, adding to the wind.
   
   float tStep = totalTime / frames;
-  float drag = powf(0.5, tStep);
+  float drag = powf(0.75, tStep);
   
   unsigned particleCount = 0; //Keep track of the total number of particles.
   for(unsigned i = 0; i < frames; i++) {
@@ -316,19 +310,18 @@ void gravity(image_processor p, unsigned imageWidth, unsigned imageHeight, unsig
     
     for(unsigned j = 0; j < wind_count; j++) {
       //Randomly remove some particles.
-      //wind_remove_rand(winds[j], 512);
+      wind_remove_rand(winds[j], 512);
       //Apply a bit of drag.
       wind_scale_velocity(winds[j], drag);
       
       //Calculate the position and velocity of the emitter.
       vec2 v = parametricCurves[j](t, cl[j]);
-      vec2 v2 = parametricCurves[j](t + EPSILON, cl[j]);
-      vec2 dcdt = vScale((tStep / EPSILON), vMinus(v2, v));
+      vec2 v2 = parametricCurves[j](t + DEPSILON, cl[j]);
+      vec2 dcdt = vScale((1.0 / DEPSILON), vMinus(v2, v));
       
       for(unsigned k = 0; k < particlesPerFrame; k++) {
-        vec2 noise = vScale((tStep * particleNoiseVelocity), symmetricUnitBall());
+        vec2 noise = vScale((particleNoiseVelocity), symmetricUnitBall());
         vec2 dvdt = vPlus(vScale(particleEmitterMomentumScalar, dcdt), noise);
-        particleNoiseVelocity = imageWidth / (32.0 * 1000.0);
         
         wind_append(winds[j], v.x, v.y, dvdt.x, dvdt.y, uniformFloat(1, 2));
       }
@@ -337,7 +330,7 @@ void gravity(image_processor p, unsigned imageWidth, unsigned imageHeight, unsig
       //wind_print(winds[j], stdout);
       
       //Update each particle.
-      wind_update_bound(winds[j], 1.0, sumWeightedPotential, &pcl, -(imageWidth / 2.0), -(imageHeight / 2.0), 3.0 * imageWidth / 2.0, 3.0 * imageWidth / 2.0);
+      wind_update_bound(winds[j], tStep, sumWeightedPotential, &pcl, -(imageWidth / 2.0), -(imageHeight / 2.0), 3.0 * imageWidth / 2.0, 3.0 * imageWidth / 2.0);
       //wind_update(winds[j], 1.0, sumWeightedPotential, &pcl);
 
       //Draw the wind.
@@ -353,7 +346,6 @@ void gravity(image_processor p, unsigned imageWidth, unsigned imageHeight, unsig
     }
     
     p(img, NULL); //Process the image (send it to the screen or to disk).
-  
   }
   
   
@@ -454,6 +446,164 @@ void curves(image_processor p, unsigned imageWidth, unsigned imageHeight, unsign
   image_free(img);
 }
 
-void dust(image_processor p, unsigned imageWidth, unsigned imageHeight, unsigned frames) {
+void dust(image_processor p, unsigned imageWidth, unsigned imageHeight, unsigned frames, unsigned nsSize, unsigned nsDepth) {
+  image* img = image_new(imageWidth, imageHeight);
+  fill_image(img, 1, 1, 1);
+  
+  #define WIND_COUNT 4
+  wind* w[WIND_COUNT];
+  vec2 wOrigin[WIND_COUNT] = {
+    {0, 0},
+    {imageWidth, 0},
+    {0, imageHeight},
+    {imageWidth, imageHeight}
+  };
+  float wColors[3 * WIND_COUNT] = {
+    1, 0, 0,
+    0, 1, 0,
+    0, 0, 1,
+    0, 0, 0,
+  };
+  for(unsigned i = 0; i < WIND_COUNT; i++) {
+    w[i] = wind_new(imageWidth * imageHeight * 10 / 1000);
+  }
+  
+  unsigned particlesToDraw = 5;
+  float maxSpread = 2.5;
+  float particleNoiseVelocity = 2.0;
+  
+  float drag = 0.99;
+  
+  float wAlpha = 0.125;
+
+  //Potentials
+  noise_sum* ncl = initialize_noise_sum_2d(nsSize, nsDepth);
+  noise_sum_scale_in(ncl, 1.0 / (imageWidth * 4.0));
+  
+  vec2 gradient = {0, 0};
+  
+  #define ORBIT_COUNT 16
+  centered_cl orbits[ORBIT_COUNT];
+  
+  for(unsigned i = 0; i < ORBIT_COUNT; i++) {
+    orbits[i].cx = uniformFloat(0, imageWidth);
+    orbits[i].cy = uniformFloat(0, imageWidth);
+    orbits[i].strength =  imageWidth * imageWidth;
+    orbits[i].denominatorSummand = (imageWidth / 4.0) * (imageWidth / 4.0);
+  }
+  
+  #undef POTENTIAL_COUNT
+  #define POTENTIAL_COUNT (2 + ORBIT_COUNT)
+  
+  float(*potentialFunctions[POTENTIAL_COUNT])(float, float, void*) = {
+    noiseSumPotential, gradientPotential
+  };
+  
+  void* pcls[POTENTIAL_COUNT] = {
+    ncl, &gradient 
+  };
+  
+  float weights[POTENTIAL_COUNT] = {
+    10, 0.5,
+  };
+  
+  for(unsigned i = 0; i < ORBIT_COUNT; i++) {
+    potentialFunctions[i + 2] = distanceSquaredPotential;
+    pcls[i + 2] = &orbits[i];
+    weights[i + 2] = 1.0 / 2.0;
+  }
+  
+  
+  poly_weighted_cl pcl = { potentialFunctions, pcls, weights, POTENTIAL_COUNT };
+  
+  
+  for(unsigned i = 0; i < frames; i++) {
+    //Whiten the image.
+    if(i % 2 == 0) {
+      if(i % 8 == 0) fill_image_a(img, 1, 1, 1, 1.0 / 64.0);
+    } else {
+      image_blur_fast_inplace(img, i / 2);
+    }
+    
+    //Render the noise
+    /*
+    for(unsigned y = 0; y < imageHeight; y++) {
+      for(unsigned x = 0; x < imageWidth; x++) {
+        float intensity = noise_sum_2d(x, y, ncl);
+        for(unsigned c = 0; c < C; c++) {
+          *image_pixel(img, x, y, c) = intensity;
+        }
+      }
+    }
+    */
+    
+    for(unsigned a = 0; a < WIND_COUNT; a++) {
+      wind_remove_rand(w[a], imageWidth * imageHeight / 1000);
+      
+      //Add wind particles.
+      unsigned particlesToAdd = w[a]->maxParticles - w[a]->particles;
+      for(unsigned j = 0; j < (particlesToAdd + 15) / 16; j++) {
+        //float x = uniformFloat(-(int)(imageWidth / 4), 5 * imageWidth / 4);
+        //float y = uniformFloat(-(int)(imageHeight / 4), 5 * imageHeight / 4);
+        float x = wOrigin[a].x;
+        float y = wOrigin[a].y;
+        
+        float dx = imageWidth / 2 - wOrigin[a].x;
+        float dy = imageHeight / 2 - wOrigin[a].y;
+        
+        dx /= imageWidth;
+        dy /= imageHeight;
+        
+        vec2 noise = vScale((particleNoiseVelocity), symmetricUnitBall());
+        wind_append(w[a], x, y, noise.x + dx, noise.y + dy, uniformFloat(0.5, 2));
+      }
+      
+      //Update wind.
+      wind_scale_velocity(w[a], drag);
+      wind_update_bound(w[a], 1.0, sumWeightedPotential, &pcl, -(imageWidth / 2.0), -(imageHeight / 2.0), 3.0 * imageWidth / 2.0, 3.0 * imageWidth / 2.0);
+      
+      /*
+      //Perturb particle momentum just a bit.  This prevents clumping.
+      for(unsigned j = 0; j < w[a]->particles; j++) {
+        vec2 noise = vScale((particleNoiseVelocity / 16.0), symmetricUnitBall());
+        wind_x(w[a])[j] += noise.x;
+        wind_y(w[a])[j] += noise.y;
+      }
+      */
+      
+      //Draw the wind.
+      //wind_draw_roffset(w[a], img,  0, 0, 0,  wAlpha * 0.5, 0, 0, 1, particlesToDraw, maxSpread);
+      //wind_draw(w[a], img,  0, 0, 0,  wAlpha, 0, 0, 1);
+      wind_draw_roffset(w[a], img,  wColors[a * 3 + 0], wColors[a * 3 + 1], wColors[a * 3 + 2],  wAlpha * 0.5, 0, 0, 1, particlesToDraw, maxSpread);
+      wind_draw(w[a], img,  wColors[a * 3 + 0], wColors[a * 3 + 1], wColors[a * 3 + 2],  wAlpha, 0, 0, 1);
+    }
+    
+    //Update noise.
+    perturb_noise_sum(ncl, 2, 0, 1, 1.0 / 16.0, 0.25, 0.001);
+    
+    //Move the orbits.
+    for(unsigned i = 0; i < ORBIT_COUNT; i++) {
+      orbits[i].cx += uniformFloatS(8);
+      orbits[i].cy += uniformFloatS(8);
+      orbits[i].cx = 0.999 * orbits[i].cx + 0.001 * imageWidth / 2;
+      orbits[i].cy = 0.999 * orbits[i].cy + 0.001 * imageHeight / 2;
+      //Apply a repulsive force between the orbits (proportional to 1 / distance).
+      for(unsigned j = i + 1; j < ORBIT_COUNT; j++) {
+        float dx = orbits[i].cx - orbits[j].cx;
+        float dy = orbits[i].cy - orbits[j].cy;
+        float dSqr = dx * dx + dy * dy;
+        float scale = imageWidth / 4; //Half the image away has effect 1.
+        orbits[i].cx += scale * dx / dSqr;
+        orbits[i].cy += scale * dy / dSqr;
+        orbits[j].cx -= scale * dx / dSqr;
+        orbits[j].cx -= scale * dy / dSqr;
+      }
+    }
+    
+    //Perturb the gradient.
+    gradient = vScale(uniformFloat(0.99, 1.0), vPlus(gradient, symmetricBall(0.01)));
+    
+    p(img, NULL); //Process the image (send it to the screen or to disk).
+  }
 
 }

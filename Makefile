@@ -1,9 +1,12 @@
 
-DBGFLAGS=-O1 -g3 -Wall -Wno-unused-function -DDEBUG
+DBGFLAGS=-O1 -g3 -Wall -Wno-char-subscripts -Werror=implicit -Werror=incompatible-pointer-types -Wno-unused-function -DDEBUG
 OPTFLAGS=-Ofast -ffast-math -DNDEBUG -march=native -g#-m32 #Causes a compiler issue: probably 32 bit library related.
 
-CFLAGS=$(DBGFLAGS) -std=c11
-#CFLAGS=$(OPTFLAGS) -std=c11 -flto
+ifeq ($(mode), debug)
+	CFLAGS=$(DBGFLAGS) -std=gnu11
+else
+	CFLAGS=$(OPTFLAGS) -std=gnu11 -flto
+endif
 
 LFLAGS=$(OPTFLAGS) -fuse-linker-plugin -flto -fwhole-program
 LIB=-lm -lX11

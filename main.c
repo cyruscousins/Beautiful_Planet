@@ -2,7 +2,7 @@
 #include <stdlib.h>
 #include <math.h>
 #include <string.h>
-#define _BSD_SOURCE
+#define _BSD_SOURCE 1
 #include <unistd.h>
 
 #include "wind.h"
@@ -379,9 +379,14 @@ void test9() {
   curves(imageProcessor, imageWidth, imageWidth, frames);
 }
 
-//Black dust on a white background.
+//Colored dust on a white background.
 void test10() {
   dust(imageProcessor, imageWidth, imageWidth, frames, nsSize, nsDepth);
+}
+
+//Interactive test.
+void test11() {
+  interactive(imageProcessor, imageWidth, imageWidth, nsSize, nsDepth);
 }
 
 
@@ -427,9 +432,9 @@ void imageToScreen(image* i, void* cl) {
   x_window_display_image(i);
 }
 
-#define TESTCOUNT 10
+#define TESTCOUNT 11
 void (*testFunctions[TESTCOUNT])() = {
-  test1, test2, test3, test4, test5, test6, test7, test8, test9, test10
+  test1, test2, test3, test4, test5, test6, test7, test8, test9, test10, test11
 };
 
 int main(int argc, char** argsv) {
@@ -444,7 +449,7 @@ int main(int argc, char** argsv) {
   for(unsigned i = 1; i < argc; i++) {
     int val;
     if(!strcmp(argsv[i], "x")) {
-      imageProcessor = imageToScreen;
+      imageProcessor = imageToScreen; //TODO: Need a global way to determine if running interactively.
     } else if(sscanf(argsv[i], "w=%d", &val)) {
       imageWidth = val;
       printf("Setting width of test images to %u.\n", imageWidth);
@@ -472,9 +477,10 @@ int main(int argc, char** argsv) {
         runTest[val - 1] = true;
       }
     } else if(!strcmp(argsv[i], "-o")){
-      imageName = argsv[++i]; //Note: not checking bounds here.
+      imageName = argsv[++i]; //TODO: not checking bounds here.
     } else {
       fprintf(stderr, "Error: unrecognized option \"%s\".  Terminating.\n", argsv[i]);
+      return 1;
     }
   }
   

@@ -60,8 +60,6 @@ void x_window_init() {
     double LUT_exponent;               /* just the lookup table */
     double CRT_exponent = 2.2;         /* just the monitor */
     double default_display_exponent;   /* whole display system */
-    //XEvent e;
-    //KeySym k;
 
     displayname = (char *)NULL;
 
@@ -176,6 +174,110 @@ void x_window_init() {
 #endif
 }
 
+//Maintain state mutated by X11 events.
+//The function processXEvents must be called to update these.
+//In order to avoid concurrency issues, it is intended that these variables are used by the same thread that calls processXEvents.
+
+#ifdef INTERACTIVE
+
+#define KEY_COUNT 255
+bool keys[KEY_COUNT] = {0};
+bool isKeyPressed(char k) {
+  return keys[k];
+}
+void setKeyPressed(char k, bool pressed) {
+  keys[k] = pressed;
+  //printf("set %u %u\n", k, pressed);
+}
+
+#define MOUSE_BUTTONS 3
+bool mouse_buttons[MOUSE_BUTTONS] = {0};
+int mouseX, mouseY;
+vec2 getMousePosition() {
+  vec2 res = { mouseX, mouseY };
+  return res;
+}
+int getMouseX() {
+  return mouseX;
+}
+int getMouseY() {
+  return mouseY;
+}
+
+bool terminated;
+
+bool isTerminated() {
+  return terminated;
+}
+
+void printXState() {
+  printf("Keys:\n");
+  for(unsigned i = 0; i < KEY_COUNT; i++) {
+    printf("%u", (unsigned)keys[i]);
+  }
+  printf("\n");
+  
+  printf("Mouse Buttons:\n");
+  for(unsigned i = 0; i < MOUSE_BUTTONS; i++) {
+    printf("%u", (unsigned)mouse_buttons[i]);
+  }
+  printf("\n");
+  printf("Mouse Position:\n");
+  printf("(%u, %u)\n", getMouseX(), getMouseY());
+}
+
+void processXEvents() {
+  //printXState();
+  
+  XEvent e;
+  KeySym k;
+  
+  while (XPending(display) && !terminated) {
+    XNextEvent(display, &e);
+    switch(e.type) {
+      case KeyPress:
+      case KeyRelease:
+        {
+          bool pressed = e.type == KeyPress;
+          XLookupString(&e.xkey, NULL, 0, &k, NULL);
+          //printf("PR %u %u\n", (unsigned)k, (unsigned)pressed);
+          //printf("E %u S %u S %u A %u a %u\n",(unsigned)XK_Escape,(unsigned)XK_Shift_L,(unsigned)XK_space,(unsigned)XK_A,(unsigned)XK_a);
+          switch(k) {
+            case XK_Escape:
+              //TODO: This isn't really a useful feature: it's here as more of a test and example of a more complicated event response.
+              setKeyPressed(ESCAPE, pressed);
+              terminated = true;
+              return;
+            case XK_space:
+              setKeyPressed(SPACE, pressed);
+              break;
+            case XK_Shift_L:
+            case XK_Shift_R:
+              setKeyPressed(SHIFT, pressed);
+              break;
+            default:
+              if(k >= XK_A && k <= XK_Z) {
+                setKeyPressed('a' + (k - XK_A), pressed);
+              }
+              if(k >= XK_a && k <= XK_z) {
+                setKeyPressed('a' + (k - XK_a), pressed);
+              }
+              break;
+          }
+        }
+        break;
+      case MotionNotify:
+        mouseX = e.xmotion.x;
+        mouseY = e.xmotion.y;
+        //printf("mouse (%u, %u) (%u, %u) (%u, %u)\n", getMouseX(), getMouseY(), e.xmotion.x, e.xmotion.y, e.xmotion.x_root, e.xmotion.y_root);
+        break;
+      //TODO mouse buttons.
+    }
+  }
+}
+
+#endif
+
 int x_window_create(unsigned w, unsigned h) {
   image_width = w;
   image_height = h;
@@ -223,8 +325,7 @@ int x_window_create(unsigned w, unsigned h) {
         /* 24-bit first */
         visual_info.screen = screen;
         visual_info.depth = 24;
-        visual_list = XGetVisualInfo(display,
-          VisualScreenMask | VisualDepthMask, &visual_info, &visuals_matched);
+        visual_list = XGetVisualInfo(display, VisualScreenMask | VisualDepthMask, &visual_info, &visuals_matched);
         if (visuals_matched == 0) {
 /* GRR:  add 15-, 16- and 32-bit TrueColor visuals (also DirectColor?) */
             fprintf(stderr, "default screen depth %d not supported, and no"
@@ -295,11 +396,25 @@ int x_window_create(unsigned w, unsigned h) {
         attrmask |= CWColormap | CWBackPixel | CWBorderPixel;
     }
     
+    #ifdef INTERACTIVE
+    attr.event_mask |= ExposureMask | KeyPressMask | ButtonPress | StructureNotifyMask | ButtonReleaseMask | KeyReleaseMask | EnterWindowMask | LeaveWindowMask | PointerMotionMask | Button1MotionMask | VisibilityChangeMask | ColormapChangeMask;
+    attrmask |= CWEventMask | CWBackPixel | CWBorderPixel;
+    //attrmask |= CWCursor;
+    
+    //TODO: I read that CWCursor was necessary to recieve cursor events.  However, it seems that using CWCursor causes a crash:
+    /*
+      X Error of failed request:  BadCursor (invalid Cursor parameter)
+      Major opcode of failed request:  1 (X_CreateWindow)
+      Resource id in failed request:  0x65696088
+      Serial number of failed request:  7
+      Current serial number in output stream:  8
+    */
+    #endif
+    
     //printf("%d %d %d\n", image_width, image_height, depth);
     //depth = 24; 
 
-    window = XCreateWindow(display, root, 0, 0, image_width, image_height, 0,
-      depth, InputOutput, visual, attrmask, &attr);
+    window = XCreateWindow(display, root, 0, 0, image_width, image_height, 0, depth, InputOutput, visual, attrmask, &attr);
 
     if (window == None) {
         fprintf(stderr, "XCreateWindow() failed\n");
@@ -381,10 +496,13 @@ int x_window_create(unsigned w, unsigned h) {
     Wait for first Expose event to do any drawing, then flush.
   ---------------------------------------------------------------------------*/
 
-    do
-        XNextEvent(display, &e);
+    //TODO should search for an expose in interactive.
+    #ifdef INTERACTIVE
+    #else
+    do XNextEvent(display, &e);
     while (e.type != Expose || e.xexpose.count);
-
+    #endif
+    
     XFlush(display);
 
 /*---------------------------------------------------------------------------

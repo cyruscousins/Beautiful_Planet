@@ -109,3 +109,60 @@ void image_print(image* i, FILE* f) {
   }
   fprintf(f, "}\n");
 }
+
+void image_draw(image* d, image* s, vec2i dp, vec2i sp, unsigned w, unsigned h) {
+  assert(dp.x >= 0);
+  assert(dp.y >= 0);
+  
+  assert(sp.x >= 0);
+  assert(sp.y >= 0);
+  
+  assert(dp.x + w <= d->width);
+  assert(dp.y + h <= d->height);
+  
+  assert(sp.x + w <= s->width);
+  assert(sp.y + h <= s->height);
+  
+  for(unsigned y = 0; y < h; y++) {
+    for(unsigned x = 0; x < w; x++) {
+      //TODO cache-efficient version?
+      for(unsigned c = 0; c < C; c++) {
+        *image_pixel(d, dp.x + x, dp.y + y, c) = *image_pixel(s, sp.x + x, sp.y + y, c);
+      }
+    }
+  }
+}
+
+//This function draws s to d with the given offsets, only drawing to the intersection of the shifted images.
+void image_draw_checked(image* d, image* s, vec2i dp, vec2i sp, unsigned w, unsigned h) {
+  int minx = MIN(dp.x, sp.x);
+  int miny = MIN(dp.y, sp.y);
+  
+  if(minx < 0) {
+    sp.x -= minx;
+    dp.x -= minx;
+    w += minx;
+  }
+  if(miny < 0) {
+    sp.y -= miny;
+    dp.y -= miny;
+    h += miny;
+  }
+  
+  int maxxo = MIN((int)d->width - (dp.x + (int)w), (int)s->width - (sp.x + (int)w));
+  int maxyo = MIN((int)d->height - (dp.y + (int)h), (int)s->height - (sp.y + (int)h));
+    
+  if(maxxo < 0) {
+    w += maxxo;
+  }
+  if(maxyo < 0) {
+    h += maxyo;
+  }
+  
+  if((int)w <= 0 || (int)h <= 0) {
+    return; //No intersection.
+  }
+  
+  image_draw(d, s, dp, sp, w, h);
+}
+

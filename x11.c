@@ -555,9 +555,11 @@ int x_window_display_image(image* img) {
       "MSBFirst" : (ximage->byte_order == LSBFirst? "LSBFirst" : "unknown")))
 */
   //ARGB 8 bit systems.
-  for(unsigned y = 0; y < img->height; y++) {
+  unsigned w = MIN(img->width, image_width);
+  unsigned h = MIN(img->height, image_height);
+  for(unsigned y = 0; y < h; y++) {
     uint8_t* d = (uint8_t*)(ximage->data + y * ximage_rowbytes);
-    for(unsigned x = 0; x < img->width; x++) {
+    for(unsigned x = 0; x < w; x++) {
       d++; //Skip the alpha channel.
       for(unsigned c = 0; c < C; c++) {
         *d++ = image_pixel_8bit_full(img, x, y, c);

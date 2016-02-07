@@ -21,12 +21,22 @@
 //"Differential" epsilon, used for calculus.
 #define DEPSILON (1.0 / (1ull << 12ull))
 
+/////////
+//Macros:
+
+#define MAX(x, y) ((x) > (y) ? (x) : (y))
+#define MIN(x, y) ((x) < (y) ? (x) : (y))
+
 ////////////////////
 //Basic Vector Math:
 
 typedef struct vec2 {
   float x, y;
 } vec2;
+
+typedef struct vec2i {
+  int x, y;
+} vec2i;
 
 vec2 vPlus(vec2 a, vec2 b);
 vec2 vMinus(vec2 a, vec2 b);

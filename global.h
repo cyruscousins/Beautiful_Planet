@@ -46,6 +46,10 @@ float vDot(vec2 a, vec2 b);
 float vDSqr(vec2 a, vec2 b);
 float vDistance(vec2 a, vec2 b);
 
+vec2 vNormalize(vec2 a);
+
+int vEqual(vec2 a, vec2 b);
+
 vec2 vRotate(vec2 a, float theta);
 
 bool bounded(float f, float bottom, float top);

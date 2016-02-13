@@ -2,7 +2,7 @@
 #Configuration (Supporting debug, release, and local builds). 
 
 GENFLAGS=-std=gnu11
-DBGFLAGS=$(GENFLAGS) -O1 -g3 -Wall -Wno-char-subscripts -Werror=implicit -Werror=incompatible-pointer-types -DDEBUG
+DBGFLAGS=$(GENFLAGS) -O0 -g3 -Wall -Wno-char-subscripts -Werror=implicit -DDEBUG
 OPTFLAGS=$(GENFLAGS) -Ofast -ffast-math -DNDEBUG -flto #-m32 #Causes a compiler issue: probably 32 bit library related.
 
 #Default mode to debug.
@@ -39,7 +39,7 @@ ifeq ($(UNAME),Darwin)
 endif
 
 #Object files for each module in Beautiful Planet.
-OBJ =  wind.o image.o draw.o potentials.o noise.o parametric.o convolution.o filters.o art.o x11.o global.o
+OBJ =  wind.o image.o draw.o potentials.o noise.o parametric.o convolution.o filters.o art.o x11.o global.o vector.o
 
 all: bp libbp.a
 
@@ -78,6 +78,9 @@ x11.o: x11.c x11.h image.h
 
 global.o: global.c global.h
 	gcc $(CFLAGS) global.c -c
+
+vector.o: vector.c vector.h
+	gcc $(CFLAGS) vector.c -c
 
 
 #Executable

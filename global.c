@@ -40,6 +40,19 @@ float vDistance(vec2 a, vec2 b) {
   return sqrtf(vL2Sqr(vMinus(a, b)));
 }
 
+vec2 vNormalize(vec2 a) {
+    float length = (a.x * a.x) + (a.y * a.y);
+    assert(length != 0);
+    length = sqrtf(length);
+    a.x /= length;
+    a.y /= length;
+    return a;
+}
+
+int vEqual(vec2 a, vec2 b) {
+    return ((a.x == b.x) && (a.y == b.y));
+}
+
 //Bounding and clamping
 bool bounded(float f, float bottom, float top) {
   return f >= bottom && f <= top;

@@ -12,6 +12,7 @@
 #include "noise.h"
 #include "parametric.h"
 #include "filters.h"
+#include "vector.h"
 
 #include "art.h"
 #include "x11.h"
@@ -389,7 +390,38 @@ void test11() {
   interactive(imageProcessor, imageWidth, imageWidth, nsSize, nsDepth);
 }
 
+//Vector graphics test
+void test12() {
+  image* img = image_new(imageWidth, imageWidth);
+  fill_image(img, 1, 1, 1);
+  
+  line_t l;
+  chain_t c;
+  cchain_t cc;
 
+  color col = {{0, 0, 0}, 1};
+
+  l.start.x = l.start.y = 4;
+  l.end.x = 10;
+  l.end.y = 20;
+  l.c = col;
+
+  c.points = malloc(3 * sizeof(vec2));
+  c.num_points = 3;
+  c.points[0].x = c.points[0].y = 0;
+  c.points[1].x = 4;
+  c.points[1].y = 0;
+  c.points[2].x = 4;
+  c.points[2].y = 4;
+  c.c = col;
+
+  draw_line(img, 8, 8, &l);
+  draw_chain(img, 16, 8, &c);
+  //draw_cchain(img, 24, 8, &cc);
+
+  FILE* f = fopen("test12.ppm", "wb");
+  image_write_ppm(img, f, 255);
+}
 
 //Output control:
 
@@ -432,9 +464,9 @@ void imageToScreen(image* i, void* cl) {
   x_window_display_image(i);
 }
 
-#define TESTCOUNT 11
+#define TESTCOUNT 12
 void (*testFunctions[TESTCOUNT])() = {
-  test1, test2, test3, test4, test5, test6, test7, test8, test9, test10, test11
+  test1, test2, test3, test4, test5, test6, test7, test8, test9, test10, test11, test12
 };
 
 int main(int argc, char** argsv) {

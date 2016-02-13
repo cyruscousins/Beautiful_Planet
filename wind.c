@@ -158,6 +158,16 @@ void wind_draw_roffset(wind* w, image* img, float r, float g, float b, float a, 
     }
   }
 }
+void wind_draw_generic(wind* w, image* img, float x0, float y0, float scale, float bound, drawfun df, void* dcl) {
+  for(unsigned i = 0; i < w->particles; i++) {
+    //Translate, scale, and offset to to make truncation round properly.
+    float x = (wind_x(w)[i] - x0) / scale + 0.5;
+    float y = (wind_y(w)[i] - y0) / scale + 0.5;
+    if(x < -bound || x >= img->width + bound || y < -bound || y >= img->height + bound) continue;
+    
+    (*df)(img, (unsigned)x, (unsigned)y, dcl);
+  }
+}
 
 void wind_print(wind* w, FILE* f) {
   fprintf(f, "{WIND %d / %d: (x, y, dx, dy, m)\n", w->particles, w->maxParticles);

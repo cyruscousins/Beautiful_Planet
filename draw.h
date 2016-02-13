@@ -20,6 +20,8 @@ typedef struct random_cl {
   color* col;
 } random_cl;
 
+typedef void (*drawfun)(image*, unsigned, unsigned, void*);
+
 void randomize_color(color* c, float cLow, float cHigh, float alpha);
 
 //Drawing rectangles

@@ -6,6 +6,7 @@
 #include <stdlib.h>
 
 #include "image.h"
+#include "draw.h"
 
 typedef struct wind {
   unsigned particles;
@@ -57,6 +58,7 @@ void wind_randomize(wind* w, unsigned count, float x0, float y0, float x1, float
 //Drawing
 void wind_draw(wind* w, image* i, float r, float g, float b, float a, float x0, float y0, float scale);
 void wind_draw_roffset(wind* w, image* i, float r, float g, float b, float a, float x0, float y0, float scale, unsigned copies, float spread);
+void wind_draw_generic(wind* w, image* img, float x0, float y0, float scale, float bound, drawfun df, void* dcl);
 
 void wind_print(wind* w, FILE* f);
 
